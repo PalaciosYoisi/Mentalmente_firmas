@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ config.APP_NAME }}{% endblock %}</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Estilos generados por Tailwind -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+    
+    <!-- Estilos personalizados -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+    <!-- Barra de navegación -->
+    <header class="bg-white shadow-md">
+        <nav x-data="{ open: false }" class="container mx-auto px-6 py-3 flex items-center justify-between">
+            <a href="{{ url_for('index') }}" class="flex items-center min-w-0">
+                <img src="{{ url_for('static', filename='img/LOGO-MENTALMENTE.png') }}" alt="MentalMente Logo" class="h-9 w-auto mr-2 md:h-10 md:mr-3 transition-all duration-200" style="max-width: 120px;">
+                <span class="text-lg md:text-xl font-bold text-gray-800 truncate">{{ config.APP_NAME }}</span>
+                    </a>
+            <div class="flex items-center lg:hidden">
+                <button @click="open = !open" class="text-gray-500 focus:outline-none" aria-label="Abrir menú">
+                    <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6H20M4 12H20M4 18H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="hidden lg:flex items-center space-x-6">
+                    <a href="{{ url_for('index') }}" class="py-2 text-gray-700 hover:text-blue-500">Inicio</a>
+                    <a href="#" class="py-2 text-gray-700 hover:text-blue-500">Nosotros</a>
+                    <a href="#" class="py-2 text-gray-700 hover:text-blue-500">Eventos</a>
+                    <a href="#" class="py-2 text-gray-700 hover:text-blue-500">Blog</a>
+                <a href="{{ url_for('agendar_cita') }}" class="py-2 px-4 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-200">Agendar Cita</a>
+                    {% if session.admin_logged_in or session.psicologo_id %}
+                        <a href="{{ url_for('logout') }}" class="py-2 text-gray-700 hover:text-blue-500">Cerrar Sesión</a>
+                    {% else %}
+                        <a href="{{ url_for('admin_login') }}" class="py-2 text-gray-700 hover:text-blue-500">Iniciar Sesión</a>
+                    {% endif %}
+                </div>
+        </nav>
+            <!-- Mobile Menu -->
+        <div x-show="open" @click.away="open = false" class="lg:hidden px-6 pb-4">
+                <a href="{{ url_for('index') }}" class="block py-2 text-gray-700 hover:text-blue-500">Inicio</a>
+                <a href="#" class="block py-2 text-gray-700 hover:text-blue-500">Nosotros</a>
+                <a href="#" class="block py-2 text-gray-700 hover:text-blue-500">Eventos</a>
+                <a href="#" class="block py-2 text-gray-700 hover:text-blue-500">Blog</a>
+            <a href="{{ url_for('agendar_cita') }}" class="block py-2 mt-2 px-4 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-200">Agendar Cita</a>
+                {% if session.admin_logged_in or session.psicologo_id %}
+                    <a href="{{ url_for('logout') }}" class="block py-2 text-gray-700 hover:text-blue-500">Cerrar Sesión</a>
+                {% else %}
+                    <a href="{{ url_for('admin_login') }}" class="block py-2 text-gray-700 hover:text-blue-500">Iniciar Sesión</a>
+                {% endif %}
+            </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <main class="container mx-auto my-8 px-6">
+        <!-- Mensajes flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-4 mb-4 text-sm text-blue-700 bg-blue-100 rounded-lg" role="alert">
+                        <span class="font-medium">{{ category|capitalize }}!</span> {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
+        <!-- Bloque de contenido -->
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Bloque para contenido de ancho completo fuera del contenedor principal -->
+    {% block full_width_content %}{% endblock %}
+
+    <!-- Pie de página -->
+    <footer>
+        <div class="container mx-auto text-center">
+            <p>&copy; 2024 Clínica Mentalmente - Todos los derechos reservados</p>
+            <div class="social-icons flex justify-center space-x-4 mt-4">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-instagram"></i></a>
+            </div>
+        </div>
+    </footer>
+    
+    <!-- Scripts personalizados -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "reto_zasca",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "watch": "tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.css --watch",
+    "build": "tailwindcss -i ./static/css/input.css -o ./static/css/tailwind.css --minify",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "tailwindcss": "^3.4.10"
+  }
+}

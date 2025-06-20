@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="bg-[#fdf6f0]">
+    <!-- Hero Section -->
+    <section class="bg-white text-center py-20 lg:py-32">
+        <div class="container mx-auto px-4">
+            <h1 class="text-5xl md:text-6xl font-extrabold mb-4 text-blue-900 tracking-tight">En Mentalmente transformamos vidas</h1>
+            <p class="text-xl md:text-2xl max-w-3xl mx-auto text-gray-600 font-medium">A través del cuidado especializado de la Salud Mental con altos estándares de calidad y ética. Ofrecemos atención individual, en parejas, familiar y grupal.</p>
+            <a href="{{ url_for('agendar_cita') }}" class="mt-8 inline-block bg-yellow-400 text-blue-900 font-bold py-3 px-8 rounded-full shadow-xl hover:bg-yellow-500 transition-all duration-200 text-lg">Agendar Cita</a>
+        </div>
+    </section>
+
+    <!-- Diferenciadores -->
+    <section class="py-16 bg-[#fff8ed] fade-in">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-bold text-blue-900 mb-12 text-center section-title">Lo que nos hace diferentes</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 justify-center items-stretch">
+                <div class="difer-card flex flex-col items-center">
+                    <div class="mb-4 text-5xl text-blue-900">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.09 6.26L20 9.27l-5 3.64L16.18 20 12 16.77 7.82 20 9 12.91l-5-3.64 5.91-.01z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-blue-900 text-center">Experiencia</h3>
+                    <p class="text-gray-700 text-center text-base">Nuestros profesionales cuentan con una trayectoria de éxito en el tratamiento de una amplia variedad de problemas de salud mental.</p>
+                </div>
+                <div class="difer-card flex flex-col items-center">
+                    <div class="mb-4 text-5xl text-blue-900">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13v-2a2 2 0 0 0-2-2h-1V7a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v2H7a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h1v2a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2v-2h1a2 2 0 0 0 2-2z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-blue-900 text-center">Enfoque Personalizado</h3>
+                    <p class="text-gray-700 text-center text-base">Entendemos que cada paciente es único, por eso nos enfocamos en brindar un tratamiento personalizado.</p>
+                </div>
+                <div class="difer-card flex flex-col items-center">
+                    <div class="mb-4 text-5xl text-blue-900">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-blue-900 text-center">Calidad Del Servicio</h3>
+                    <p class="text-gray-700 text-center text-base">Creemos que la calidad del servicio se refleja en los resultados positivos que obtienen nuestros pacientes.</p>
+                </div>
+                <div class="difer-card flex flex-col items-center">
+                    <div class="mb-4 text-5xl text-blue-900">
+                        <svg width="48" height="48" fill="none" viewBox="0 0 24 24"><path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 text-blue-900 text-center">Tratamientos Efectivos</h3>
+                    <p class="text-gray-700 text-center text-base">Nuestros expertos en salud mental están permanentemente actualizados con las últimas técnicas y avances.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Servicios -->
+    <section class="py-16 bg-white fade-in">
+        <div class="container mx-auto px-6">
+            <h2 class="text-4xl font-bold text-blue-900 mb-12 text-center section-title">Nuestros servicios</h2>
+            <div class="space-y-10" id="servicios-lista">
+                <!-- Servicio 1: Psicología Clínica -->
+                <div class="service-horizontal-card flex flex-col md:flex-row items-center bg-white rounded-2xl shadow-lg overflow-hidden group transition-transform duration-300 opacity-0 translate-y-10">
+                    <img src="{{ url_for('static', filename='img/servicios/servicio1.jpeg') }}" alt="Psicología Clínica" class="w-full md:w-1/3 h-56 object-cover md:rounded-l-2xl md:rounded-r-none rounded-t-2xl md:rounded-t-none transition-transform duration-500 group-hover:scale-105">
+                    <div class="flex-1 p-8 flex flex-col justify-center items-start">
+                        <h3 class="text-2xl font-bold mb-3 text-blue-900">Psicología Clínica</h3>
+                        <ul class="list-disc list-inside text-gray-700 text-base space-y-2">
+                            <li>Psicoterapia individual.</li>
+                            <li>Psicoterapia familiar y de pareja.</li>
+                            <li>Asesoría y orientación psicológica.</li>
+                            <li>Primeros auxilios psicológicos e intervención en crisis.</li>
+                            <li>Desarrollo de Habilidades de Afrontamiento.</li>
+                        </ul>
+                        <a href="#" class="inline-block mt-6 px-6 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition-all duration-200">Saber más</a>
+                    </div>
+                </div>
+                <!-- Servicio 2: Neuropsicología Clínica -->
+                <div class="service-horizontal-card flex flex-col md:flex-row items-center bg-white rounded-2xl shadow-lg overflow-hidden group transition-transform duration-300 opacity-0 translate-y-10">
+                    <img src="{{ url_for('static', filename='img/servicios/servicio2.jpg') }}" alt="Neuropsicología Clínica" class="w-full md:w-1/3 h-56 object-cover md:rounded-l-2xl md:rounded-r-none rounded-t-2xl md:rounded-t-none transition-transform duration-500 group-hover:scale-105">
+                    <div class="flex-1 p-8 flex flex-col justify-center items-start">
+                        <h3 class="text-2xl font-bold mb-3 text-blue-900">Neuropsicología Clínica</h3>
+                        <ul class="list-disc list-inside text-gray-700 text-base space-y-2">
+                            <li>Evaluación Neuropsicológica.</li>
+                            <li>Rehabilitación Neuropsicológica.</li>
+                            <li>Intervención y Apoyo Psicoeducativo.</li>
+                            <li>Evaluación y diagnóstico neuropsicológico.</li>
+                            <li>Consultoría y Colaboración Multidisciplinaria.</li>
+                        </ul>
+                        <a href="#" class="inline-block mt-6 px-6 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition-all duration-200">Saber más</a>
+                    </div>
+                </div>
+                <!-- Servicio 3: Psiquiatría -->
+                <div class="service-horizontal-card flex flex-col md:flex-row items-center bg-white rounded-2xl shadow-lg overflow-hidden group transition-transform duration-300 opacity-0 translate-y-10">
+                    <img src="{{ url_for('static', filename='img/servicios/servicio3.jpg') }}" alt="Psiquiatría" class="w-full md:w-1/3 h-56 object-cover md:rounded-l-2xl md:rounded-r-none rounded-t-2xl md:rounded-t-none transition-transform duration-500 group-hover:scale-105">
+                    <div class="flex-1 p-8 flex flex-col justify-center items-start">
+                        <h3 class="text-2xl font-bold mb-3 text-blue-900">Psiquiatría</h3>
+                        <ul class="list-disc list-inside text-gray-700 text-base space-y-2">
+                            <li>Evaluación Psiquiátrica.</li>
+                            <li>Manejo Farmacológico.</li>
+                            <li>Intervención en Crisis.</li>
+                            <li>Programas de Rehabilitación Psiquiátrica.</li>
+                            <li>Neuropsiquiatría.</li>
+                        </ul>
+                        <a href="#" class="inline-block mt-6 px-6 py-2 bg-blue-500 text-white rounded-full shadow hover:bg-blue-600 transition-all duration-200">Saber más</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block full_width_content %}
+<!-- Call to Action -->
+<section class="w-full bg-blue-900 py-20">
+    <div class="container mx-auto px-6 text-center">
+        <h2 class="text-4xl font-bold mb-4 text-yellow-400" style="color: var(--color-secondary);">¡Tu salud mental, Sí importa!</h2>
+        <p class="text-xl mb-8 text-yellow-300" style="color: var(--color-secondary);">Agende una cita ahora</p>
+        <a href="{{ url_for('agendar_cita') }}" 
+           class="inline-flex items-center justify-center border-2 font-bold py-3 px-8 rounded-lg transition-all duration-300 text-lg"
+           style="border-color: var(--color-secondary); color: var(--color-secondary);"
+           onmouseover="this.style.backgroundColor=getComputedStyle(this).getPropertyValue('--color-secondary'); this.style.color=getComputedStyle(this).getPropertyValue('--color-primary');"
+           onmouseout="this.style.backgroundColor='transparent'; this.style.color=getComputedStyle(this).getPropertyValue('--color-secondary');">
+            <i class="fas fa-calendar-check mr-3"></i>
+            <span>AGENDAR CITA</span>
+        </a>
+    </div>
+</section>
+{% endblock %} 

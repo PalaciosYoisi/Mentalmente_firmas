@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}Detalle de Cita{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="my-4">Detalle de Cita</h2>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Cita #{{ cita.id }}</h5>
+        </div>
+        <div class="card-body">
+            <dl class="row">
+                <dt class="col-sm-3">Paciente</dt>
+                <dd class="col-sm-9">{{ cita.paciente.nombre_completo }}</dd>
+                <dt class="col-sm-3">Documento</dt>
+                <dd class="col-sm-9">{{ cita.paciente.numero_identificacion }}</dd>
+                <dt class="col-sm-3">Psicólogo</dt>
+                <dd class="col-sm-9">{{ cita.psicologo.nombre_completo }}</dd>
+                <dt class="col-sm-3">Fecha y Hora</dt>
+                <dd class="col-sm-9">{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</dd>
+                <dt class="col-sm-3">Estado</dt>
+                <dd class="col-sm-9">{{ cita.estado|capitalize }}</dd>
+                <dt class="col-sm-3">Tipo de Consulta</dt>
+                <dd class="col-sm-9">{{ cita.tipo_consulta }}</dd>
+            </dl>
+            <a href="{{ url_for('admin_citas') }}" class="btn btn-secondary">Volver</a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

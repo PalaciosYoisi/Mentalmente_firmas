@@ -1,0 +1,515 @@
+
+/* =====================
+   PALETA DE COLORES
+   ===================== */
+:root {
+    --color-primary: #2c3e50;
+    --color-secondary: #f39c12;
+    --color-accent: #e67e22;
+    --color-bg: #f9f9f9;
+    --color-card: #fff;
+    --color-footer: #34495e;
+    --color-footer-text: #ecf0f1;
+    --color-btn: #f39c12;
+    --color-btn-hover: #e67e22;
+    --color-text: #333;
+    --color-text-light: #7f8c8d;
+}
+
+/* =====================
+   TIPOGRAFÍA Y JERARQUÍA
+   ===================== */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.7;
+    font-size: 1.08rem;
+    letter-spacing: 0.01em;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
+    color: var(--color-primary);
+    line-height: 1.2;
+    margin-bottom: 0.5em;
+}
+
+h1 {
+    font-size: 2.8rem;
+    margin-bottom: 0.7em;
+}
+h2 {
+    font-size: 2.1rem;
+    margin-bottom: 0.6em;
+}
+h3 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5em;
+}
+h4, h5, h6 {
+    font-size: 1.1rem;
+    margin-bottom: 0.4em;
+}
+
+p, label, li {
+    color: var(--color-text);
+    font-size: 1.08rem;
+    margin-bottom: 0.7em;
+}
+
+strong, b {
+    color: var(--color-secondary);
+}
+
+/* =====================
+   LAYOUT GLOBAL
+   ===================== */
+.container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 0;
+}
+.section {
+    margin-bottom: 3rem;
+    padding: 2.5rem 0;
+}
+.section-title {
+    font-size: 2.2rem;
+    color: var(--color-primary);
+    margin-bottom: 1.5rem;
+    text-align: center;
+    letter-spacing: 0.02em;
+}
+.section-subtitle {
+    font-size: 1.3rem;
+    color: var(--color-text-light);
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+/* =====================
+   HERO SECTION
+   ===================== */
+.hero-section {
+    background-position: center 30%;
+    height: 80vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 0 1rem;
+}
+.hero-section h1 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    margin-bottom: 1.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+.hero-section p {
+    font-size: 1.5rem;
+    font-weight: 500;
+    max-width: 800px;
+    margin: 0 auto 2rem;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* =====================
+   BOTONES
+   ===================== */
+.btn-agendar {
+    background-color: var(--color-secondary);
+    color: #fff;
+    font-weight: 700;
+    padding: 1rem 2.5rem;
+    border-radius: 50px;
+    transition: all 0.3s cubic-bezier(.4,2,.3,1);
+    box-shadow: 0 4px 15px rgba(243, 156, 18, 0.4);
+    border: none;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+.btn-agendar:hover, .btn-agendar:focus {
+    background-color: var(--color-btn-hover);
+    transform: translateY(-3px) scale(1.03);
+    box-shadow: 0 6px 20px rgba(230, 126, 34, 0.5);
+}
+
+/* =====================
+   TARJETAS DE SERVICIOS
+   ===================== */
+.service-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+.service-card {
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(.4,2,.3,1);
+    border: none;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    background: var(--color-card);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1.5rem 1.5rem 1.5rem;
+    min-height: 350px;
+}
+.service-card:hover {
+    transform: translateY(-10px) scale(1.02);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+}
+.service-card img {
+    height: 180px;
+    width: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 1.2rem;
+    transition: transform 0.5s cubic-bezier(.4,2,.3,1);
+}
+.service-card:hover img {
+    transform: scale(1.05);
+}
+.service-card h3 {
+    margin-bottom: 0.7rem;
+    font-size: 1.3rem;
+}
+.service-card p {
+    color: var(--color-text-light);
+    font-size: 1.05rem;
+}
+
+/* === Servicios horizontales === */
+.service-horizontal-card {
+    box-shadow: 0 8px 32px rgba(44,62,80,0.10);
+    border-radius: 1.5rem;
+    overflow: hidden;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 2rem;
+    transition: box-shadow 0.3s, transform 0.3s;
+    opacity: 0;
+    transform: translateY(40px);
+    animation: fadeInUp 0.8s cubic-bezier(.4,2,.3,1) forwards;
+}
+.service-horizontal-card:hover {
+    box-shadow: 0 16px 40px rgba(44,62,80,0.18);
+    transform: translateY(-6px) scale(1.02);
+}
+.service-horizontal-card img {
+    object-fit: cover;
+    width: 100%;
+    height: 220px;
+    transition: transform 0.5s cubic-bezier(.4,2,.3,1);
+}
+@media (min-width: 768px) {
+    .service-horizontal-card {
+        flex-direction: row;
+        min-height: 220px;
+    }
+    .service-horizontal-card img {
+        width: 320px;
+        height: 220px;
+        border-radius: 1.5rem 0 0 1.5rem;
+    }
+}
+.service-horizontal-card .flex-1 {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+/* =====================
+   SECCIÓN CTA
+   ===================== */
+.cta-section {
+    background-color: var(--color-primary);
+    padding: 5rem 0;
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+.cta-section h2 {
+    color: white;
+    font-size: 2.8rem;
+    margin-bottom: 1.5rem;
+}
+.cta-section p {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.3rem;
+    margin-bottom: 2rem;
+}
+
+/* =====================
+   FORMULARIO DE AGENDAR
+   ===================== */
+#agendar-form {
+    background-color: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+#agendar-form .step {
+    padding: 2.5rem 0;
+}
+#agendar-form h3 {
+    color: var(--color-primary);
+    margin-bottom: 2rem;
+    font-size: 1.8rem;
+}
+#agendar-form input, 
+#agendar-form select, 
+#agendar-form textarea {
+    border: 2px solid #ecf0f1;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    transition: all 0.3s cubic-bezier(.4,2,.3,1);
+    margin-bottom: 1.2rem;
+    width: 100%;
+    background: #fafbfc;
+}
+#agendar-form input:focus, 
+#agendar-form select:focus, 
+#agendar-form textarea:focus {
+    border-color: var(--color-secondary);
+    box-shadow: 0 0 0 3px rgba(243, 156, 18, 0.15);
+    outline: none;
+}
+#agendar-form button[type="submit"] {
+    margin-top: 1.5rem;
+}
+
+/* =====================
+   TARJETAS DE PSICÓLOGOS
+   ===================== */
+.psychologists-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+.psychologist-card {
+    border: 2px solid transparent;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(.4,2,.3,1);
+    cursor: pointer;
+    background: var(--color-card);
+    box-shadow: 0 4px 18px rgba(44, 62, 80, 0.07);
+    padding: 1.5rem 1.2rem;
+    min-width: 220px;
+    max-width: 270px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.psychologist-card:hover {
+    border-color: var(--color-secondary);
+    transform: translateY(-5px) scale(1.03);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.13);
+}
+.psychologist-card img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 1rem;
+}
+.psychologist-card h4 {
+    margin-bottom: 0.5rem;
+    font-size: 1.15rem;
+}
+.psychologist-card p {
+    color: var(--color-text-light);
+    font-size: 0.98rem;
+    text-align: center;
+}
+
+/* =====================
+   ICONOS
+   ===================== */
+.icon {
+    font-size: 3rem;
+    margin-bottom: 1.5rem;
+    color: var(--color-secondary);
+}
+
+/* =====================
+   FOOTER
+   ===================== */
+footer {
+    background: #ffffff;
+    color: var(--color-text);
+    padding: 3rem 1.5rem;
+    text-align: center;
+    font-size: 1rem;
+    margin-top: 4rem;
+    border-top: 1px solid #e5e7eb;
+}
+footer p {
+    color: var(--color-text-light);
+    margin-bottom: 1.5rem;
+}
+footer .social-icons a {
+    color: var(--color-text);
+    font-size: 1.5rem;
+    transition: color 0.3s, transform 0.3s;
+    display: inline-block;
+}
+footer .social-icons a:hover {
+    color: var(--color-primary);
+    transform: translateY(-3px);
+}
+
+/* =====================
+   RESPONSIVE DESIGN
+   ===================== */
+@media (max-width: 1200px) {
+    .container {
+        width: 96%;
+    }
+}
+@media (max-width: 1024px) {
+    .hero-section h1 {
+        font-size: 2.8rem;
+    }
+    .hero-section p {
+        font-size: 1.3rem;
+    }
+    .service-cards {
+        gap: 1.2rem;
+    }
+}
+@media (max-width: 900px) {
+    .psychologists-grid {
+        gap: 1.2rem;
+    }
+}
+@media (max-width: 768px) {
+    .hero-section {
+        height: 70vh;
+    }
+    .hero-section h1 {
+        font-size: 2.2rem;
+    }
+    .hero-section p {
+        font-size: 1.1rem;
+    }
+    .cta-section h2 {
+        font-size: 2.2rem;
+    }
+    .container {
+        padding: 1.2rem 0;
+    }
+    .section {
+        padding: 1.2rem 0;
+    }
+}
+@media (max-width: 576px) {
+    .hero-section {
+        height: 60vh;
+        padding: 0 0.3rem;
+    }
+    .hero-section h1 {
+        font-size: 1.5rem;
+    }
+    .btn-agendar {
+        padding: 0.8rem 1.8rem;
+        font-size: 1rem;
+    }
+    .service-card {
+        padding: 1.2rem 0.7rem 1rem 0.7rem;
+    }
+    #agendar-form {
+        padding: 1.2rem 0.7rem;
+    }
+}
+
+/* =====================
+   ANIMACIONES
+   ===================== */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.fade-in {
+    animation: fadeInUp 1s ease forwards;
+}
+.delay-1 {
+    animation-delay: 0.2s;
+}
+.delay-2 {
+    animation-delay: 0.4s;
+}
+.delay-3 {
+    animation-delay: 0.6s;
+}
+
+/* === Diferenciadores (Lo que nos hace diferentes) === */
+.difer-card {
+    background: #ffe6a7;
+    border-radius: 1rem;
+    box-shadow: 0 4px 24px rgba(44,62,80,0.10);
+    padding: 2.5rem 1.5rem 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: box-shadow 0.3s, transform 0.3s;
+    min-height: 320px;
+}
+.difer-card:hover {
+    box-shadow: 0 8px 32px rgba(44,62,80,0.18);
+    transform: translateY(-6px) scale(1.04);
+}
+.difer-card svg {
+    width: 3.2rem;
+    height: 3.2rem;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    display: block;
+}
+.difer-card h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.7rem;
+    text-align: center;
+}
+.difer-card p {
+    color: #333;
+    font-size: 1.05rem;
+    text-align: center;
+}
+@media (max-width: 900px) {
+    .difer-card {
+        min-height: 260px;
+        padding: 1.5rem 1rem 1.2rem 1rem;
+    }
+}
+@media (max-width: 600px) {
+    .difer-card {
+        min-height: 0;
+        padding: 1.2rem 0.7rem 1rem 0.7rem;
+    }
+}

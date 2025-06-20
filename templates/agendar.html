@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+
+{% block title %}Agendar Cita - Clínica Mentalmente{% endblock %}
+
+{% block content %}
+<div x-data="appointmentForm()">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-xl overflow-hidden">
+        <div class="bg-blue-800 p-6 text-center text-white">
+            <h2 class="text-3xl font-bold"><i class="fas fa-calendar-check mr-2"></i>Agendar Cita Online</h2>
+            <p>Complete el formulario para reservar su cita</p>
+        </div>
+
+        <!-- Stepper -->
+        <div class="border-b border-gray-200">
+            <div class="flex justify-around">
+                <button @click="step = 1" :class="{ 'border-blue-500 text-blue-600': step >= 1, 'border-transparent text-gray-500': step < 1 }" class="flex-1 py-4 text-center font-semibold border-b-4 focus:outline-none">
+                    1. Psicólogo
+                </button>
+                <button @click="step = 2" :disabled="!psychologist" :class="{ 'border-blue-500 text-blue-600': step >= 2, 'border-transparent text-gray-500': step < 2 }" class="flex-1 py-4 text-center font-semibold border-b-4 focus:outline-none" :disabled="!psychologist">
+                    2. Fecha y Hora
+                </button>
+                <button @click="step = 3" :disabled="!appointmentDate || !appointmentTime" :class="{ 'border-blue-500 text-blue-600': step >= 3, 'border-transparent text-gray-500': step < 3 }" class="flex-1 py-4 text-center font-semibold border-b-4 focus:outline-none">
+                    3. Tus Datos
+                </button>
+            </div>
+        </div>
+
+        <div class="p-8">
+            <form method="POST" action="{{ url_for('agendar_cita') }}">
+                <!-- Step 1: Psychologist Selection -->
+                <div x-show="step === 1">
+                    <h3 class="text-2xl font-semibold mb-6">Selecciona tu psicólogo</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {% for psicologo in psicologos %}
+                        <div @click="psychologist = '{{ psicologo.id }}'"
+                             :class="{ 'border-blue-500 bg-blue-50 scale-105': psychologist == '{{ psicologo.id }}' }"
+                             class="flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-400">
+                            <div class="ml-4">
+                                <h4 class="font-bold text-lg">{{ psicologo.nombre_completo }}</h4>
+                                <p class="text-gray-600">{{ psicologo.especialidad }}</p>
+                            </div>
+                            <input type="radio" name="psicologo_id" value="{{ psicologo.id }}" class="hidden" x-model="psychologist">
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="flex justify-end mt-8">
+                        <button @click="step = 2" :disabled="!psychologist" type="button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300">Siguiente</button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Date and Time -->
+                <div x-show="step === 2">
+                    <h3 class="text-2xl font-semibold mb-6">Selecciona fecha y hora</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="appointment-date" class="block font-semibold mb-2">Fecha</label>
+                            <input type="date" id="appointment-date" name="appointment_date" :min="minDate" x-model="appointmentDate" class="w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block font-semibold mb-2">Horarios disponibles</label>
+                            <div id="time-slots-container" class="grid grid-cols-3 gap-2">
+                                <template x-if="isLoadingTimes">
+                                    <p class="text-gray-500 col-span-3">Cargando horarios...</p>
+                                </template>
+                                <template x-if="!isLoadingTimes && availableTimes.length > 0">
+                                    <template x-for="time in availableTimes" :key="time">
+                                        <button type="button" x-text="time" 
+                                                @click="selectTime(time)"
+                                                :class="{ 'bg-blue-500 text-white': appointmentTime && appointmentTime.endsWith(time), 'hover:bg-blue-100': !(appointmentTime && appointmentTime.endsWith(time)) }"
+                                                class="p-2 border rounded-lg text-center cursor-pointer focus:outline-none transition-colors">
+                                        </button>
+                                    </template>
+                                </template>
+                                <template x-if="!isLoadingTimes && availableTimes.length === 0">
+                                    <p class="text-gray-500 col-span-3" x-text="timeSlotsMessage"></p>
+                                </template>
+                            </div>
+                            <input type="hidden" id="selected-time" name="fecha_hora" x-model="appointmentTime">
+                        </div>
+                    </div>
+                    <div class="flex justify-between mt-8">
+                        <button @click="step = 1" type="button" class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">Anterior</button>
+                        <button @click="step = 3" :disabled="!appointmentDate || !appointmentTime" type="button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300">Siguiente</button>
+                    </div>
+                </div>
+
+                <!-- Informacion del paciente -->
+                <div x-show="step === 3">
+                    <h3 class="text-2xl font-semibold mb-6">Tus datos</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div>
+                            <label for="nombre_completo" class="block text-sm font-medium text-gray-700">Nombre completo</label>
+                            <input type="text" id="nombre_completo" name="nombre_completo" required class="mt-1 w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label for="tipo_identificacion" class="block text-sm font-medium text-gray-700">Tipo de documento</label>
+                            <select id="tipo_identificacion" name="tipo_identificacion" required class="mt-1 w-full p-2 border rounded-lg">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                <option value="CC">Cédula de Ciudadanía</option>
+                                <option value="TI">Tarjeta de Identidad</option>
+                                <option value="CE">Cédula de Extranjería</option>
+                                <option value="PAS">Pasaporte</option>
+                                <option value="RC">Registro Civil</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="numero_identificacion" class="block text-sm font-medium text-gray-700">Número de documento</label>
+                            <input type="text" id="numero_identificacion" name="numero_identificacion" required class="mt-1 w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">Correo electrónico</label>
+                            <input type="email" id="email" name="email" required class="mt-1 w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label for="telefono" class="block text-sm font-medium text-gray-700">Teléfono</label>
+                            <input type="tel" id="telefono" name="telefono" required class="mt-1 w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label for="fecha_nacimiento" class="block text-sm font-medium text-gray-700">Fecha de nacimiento</label>
+                            <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" required class="mt-1 w-full p-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label for="genero" class="block text-sm font-medium text-gray-700">Género</label>
+                            <select id="genero" name="genero" required class="mt-1 w-full p-2 border rounded-lg">
+                                <option value="" disabled selected>Selecciona una opción</option>
+                                <option value="Masculino">Masculino</option>
+                                <option value="Femenino">Femenino</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="direccion" class="block text-sm font-medium text-gray-700">Dirección</label>
+                            <input type="text" id="direccion" name="direccion" required class="mt-1 w-full p-2 border rounded-lg">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="ciudad" class="block text-sm font-medium text-gray-700">Ciudad</label>
+                            <select id="ciudad" name="ciudad" required class="mt-1 w-full p-2 border rounded-lg">
+                                <option value="" disabled selected>Selecciona tu sede</option>
+                                <option value="Apartadó">Apartadó</option>
+                                <option value="Medellín">Medellín</option>
+                                <option value="Quibdó">Quibdó</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2" id="tutor-fields" style="display:none;">
+                            <hr class="my-4">
+                            <h4 class="text-lg font-semibold mb-2 text-blue-700">Datos del Padre/Madre o Tutor</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                                <div>
+                                    <label for="tutor_nombre_completo" class="block text-sm font-medium text-gray-700">Nombre completo del tutor</label>
+                                    <input type="text" id="tutor_nombre_completo" name="tutor_nombre_completo" class="mt-1 w-full p-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="tutor_tipo_identificacion" class="block text-sm font-medium text-gray-700">Tipo de identificación</label>
+                                    <input type="text" id="tutor_tipo_identificacion" name="tutor_tipo_identificacion" class="mt-1 w-full p-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="tutor_numero_identificacion" class="block text-sm font-medium text-gray-700">Número de identificación</label>
+                                    <input type="text" id="tutor_numero_identificacion" name="tutor_numero_identificacion" class="mt-1 w-full p-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="tutor_email" class="block text-sm font-medium text-gray-700">Correo electrónico del tutor</label>
+                                    <input type="email" id="tutor_email" name="tutor_email" class="mt-1 w-full p-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="tutor_telefono" class="block text-sm font-medium text-gray-700">Teléfono del tutor</label>
+                                    <input type="text" id="tutor_telefono" name="tutor_telefono" class="mt-1 w-full p-2 border rounded-lg">
+                                </div>
+                                <div>
+                                    <label for="tutor_ciudad" class="block text-sm font-medium text-gray-700">Ciudad donde se firma</label>
+                                    <input type="text" id="tutor_ciudad" name="tutor_ciudad" class="mt-1 w-full p-2 border rounded-lg">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <label class="flex items-center">
+                            <input type="checkbox" x-model="termsAccepted" class="mr-2">
+                            Acepto los <a href="#" @click.prevent="$dispatch('open-modal', 'termsModal')" class="text-blue-600 hover:underline">términos y condiciones</a> y 
+                            <a href="#" @click.prevent="$dispatch('open-modal', 'privacyModal')" class="text-blue-600 hover:underline">política de privacidad</a>.
+                        </label>
+                    </div>
+                    <div class="flex justify-between mt-8">
+                        <button @click="step = 2" type="button" class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">Anterior</button>
+                        <button type="submit" :disabled="!termsAccepted" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:bg-gray-300">
+                            <i class="fas fa-check mr-2"></i>Confirmar Cita
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div x-data="{ open: false, id: '' }" @open-modal.window="open = ($event.detail === id)">
+        <div x-show="open" x-cloak class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+            <div @click.away="open = false" class="bg-white rounded-lg shadow-xl max-w-2xl w-full p-8">
+                <div x-show="id === 'termsModal'">
+                    {% include "terms_and_conditions.html" %}
+                </div>
+                <div x-show="id === 'privacyModal'">
+                    {% include "privacy_policy.html" %}
+                </div>
+                <div class="text-right mt-4">
+                    <button @click="open = false" class="px-4 py-2 bg-gray-200 rounded-lg">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function appointmentForm() {
+    return {
+        step: 1,
+        psychologist: '',
+        appointmentDate: '',
+        appointmentTime: '',
+        termsAccepted: false,
+        availableTimes: [],
+        isLoadingTimes: false,
+        timeSlotsMessage: 'Selecciona un psicólogo y una fecha.',
+        
+        init() {
+            this.$watch('psychologist', () => {
+                this.resetTime();
+                this.fetchAvailableTimes();
+            });
+            this.$watch('appointmentDate', () => {
+                this.resetTime();
+                this.fetchAvailableTimes();
+            });
+        },
+
+        get minDate() {
+    const today = new Date();
+            today.setDate(today.getDate() + 1);
+            return today.toISOString().split('T')[0];
+        },
+
+        fetchAvailableTimes() {
+            if (!this.psychologist || !this.appointmentDate) {
+                this.availableTimes = [];
+                this.timeSlotsMessage = 'Selecciona un psicólogo y una fecha.';
+            return;
+        }
+
+            this.isLoadingTimes = true;
+            this.availableTimes = [];
+            this.timeSlotsMessage = 'Cargando horarios...';
+
+            fetch(`/get-available-times?psicologo_id=${this.psychologist}&date=${this.appointmentDate}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    this.availableTimes = data;
+                    if (data.length === 0) {
+                        this.timeSlotsMessage = 'No hay horarios disponibles para este día.';
+            }
+                })
+                .catch(error => {
+                    console.error('Error fetching times:', error);
+                    this.timeSlotsMessage = 'Error al cargar los horarios.';
+                })
+                .finally(() => {
+                    this.isLoadingTimes = false;
+                });
+        },
+
+        selectTime(time) {
+            this.appointmentTime = `${this.appointmentDate}T${time}`;
+        },
+        
+        resetTime() {
+            this.appointmentTime = '';
+            this.availableTimes = [];
+        }
+    }
+}
+
+// Calcular edad del paciente y mostrar formulario para tutor en caso de que aplique 
+function checkTutorRequirement() {
+    const fechaNacimiento = document.getElementById('fecha_nacimiento').value;
+    const tipoIdentificacion = document.getElementById('tipo_identificacion').value;
+    if (!fechaNacimiento) {
+        document.getElementById('tutor-fields').style.display = 'none';
+        return;
+    }
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const m = hoy.getMonth() - nacimiento.getMonth();
+    if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
+        edad--;
+    }
+    if (edad < 18 || tipoIdentificacion === "TI" || tipoIdentificacion === "RC") {
+        document.getElementById('tutor-fields').style.display = 'block';
+    } else {
+        document.getElementById('tutor-fields').style.display = 'none';
+    }
+}
+document.getElementById('fecha_nacimiento').addEventListener('change', checkTutorRequirement);
+document.getElementById('tipo_identificacion').addEventListener('change', checkTutorRequirement);
+</script>
+{% endblock %}

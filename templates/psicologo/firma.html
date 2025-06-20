@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="consentimiento-background">
+    <div class="container">
+        <div class="page-logo">
+            <img src="{{ url_for('static', filename='img/LOGO-MENTALMENTE.png') }}" alt="MentalMente Logo">
+        </div>
+        
+        <h2 class="text-center mb-4">Firma del Consentimiento</h2>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h3>Consentimiento Informado</h3>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Paciente:</strong> {{ consentimiento.cita.paciente.nombre_completo }}</p>
+                        <p><strong>Documento:</strong> {{ consentimiento.cita.paciente.numero_identificacion }}</p>
+                        <p><strong>Fecha de cita:</strong> {{ consentimiento.cita.fecha_hora.strftime('%d/%m/%Y a las %H:%M') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Psicólogo:</strong> {{ consentimiento.cita.psicologo.nombre_completo }}</p>
+                        <p><strong>Estado:</strong> <span class="badge bg-warning text-dark">Pendiente de firma del psicólogo</span></p>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h5>Firma del Paciente:</h5>
+                    <div class="text-center">
+                        <img src="{{ url_for('static', filename='firmas/firma_' ~ consentimiento.cita.id ~ '.png') }}" 
+                             class="img-fluid border rounded" 
+                             style="max-height: 100px; max-width: 300px;"
+                             alt="Firma del paciente">
+                        <p class="text-muted mt-2"><small>Firma del paciente - {{ consentimiento.fecha_firma_paciente.strftime('%d/%m/%Y %H:%M') }}</small></p>
+                    </div>
+                </div>
+                
+                <form method="POST" class="mt-4">
+                    <div class="form-group">
+                        <h4>Firma Digital del Psicólogo</h4>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Por favor dibuje su firma en el recuadro inferior para completar el consentimiento informado.
+                        </div>
+                        
+                        <div class="signature-container mb-3">
+                            <canvas id="signature-pad" class="signature-pad"></canvas>
+                        </div>
+                        
+                        <input type="hidden" id="firma_psicologo" name="firma_psicologo">
+                        
+                        <div class="d-flex justify-content-between">
+                            <button type="button" id="clear" class="btn btn-secondary">
+                                <i class="fas fa-eraser"></i> Limpiar Firma
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check"></i> Firmar y Completar
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.getElementById('signature-pad');
+    const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)'
+    });
+    
+    function resizeCanvas() {
+        const ratio = Math.max(window.devicePixelRatio || 1, 1);
+        canvas.width = canvas.offsetWidth * ratio;
+        canvas.height = canvas.offsetHeight * ratio;
+        canvas.getContext('2d').scale(ratio, ratio);
+        signaturePad.clear();
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    document.getElementById('clear').addEventListener('click', function() {
+        signaturePad.clear();
+    });
+    
+    document.querySelector('form').addEventListener('submit', function(event) {
+        if (signaturePad.isEmpty()) {
+            alert("Por favor proporcione su firma antes de enviar.");
+            event.preventDefault();
+        } else {
+            document.getElementById('firma_psicologo').value = signaturePad.toDataURL('image/png');
+        }
+    });
+});
+</script>
+
+<style>
+.signature-pad {
+    width: 100%;
+    height: 200px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background-color: #f8f9fa;
+}
+
+.signature-container {
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+}
+</style>
+{% endblock %}

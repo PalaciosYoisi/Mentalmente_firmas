@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Gestión de Citas{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="my-4">Gestión de Citas</h2>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Citas Pendientes</h5>
+                <div>
+                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i> Volver
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Paciente</th>
+                            <th>Documento</th>
+                            <th>Fecha/Hora</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cita in citas_pendientes %}
+                        <tr>
+                            <td>{{ cita.id }}</td>
+                            <td>{{ cita.paciente.nombre_completo }}</td>
+                            <td>{{ cita.paciente.numero_identificacion }}</td>
+                            <td>{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <form method="POST" action="{{ url_for('decision_cita', cita_id=cita.id) }}" style="display: inline;">
+                                        <input type="hidden" name="decision" value="aceptar">
+                                        <button type="submit" class="btn btn-sm btn-success" title="Aprobar cita">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('decision_cita', cita_id=cita.id) }}" style="display: inline;">
+                                        <input type="hidden" name="decision" value="rechazar">
+                                        <button type="submit" class="btn btn-sm btn-danger" title="Rechazar cita">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('reenviar_correo_cita', cita_id=cita.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn btn-sm btn-warning" title="Reenviar correo de firma">
+                                            <i class="fas fa-envelope"></i>
+                                        </button>
+                                    </form>
+                                    <a href="{{ url_for('ver_cita', cita_id=cita.id) }}" class="btn btn-sm btn-info" title="Ver detalles">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center">No hay citas pendientes</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
