@@ -3,41 +3,36 @@
 {% block title %}Gestión de Citas{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2 class="my-4">Gestión de Citas</h2>
-    
-    <div class="card mb-4">
-        <div class="card-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Citas Pendientes</h5>
-                <div>
-                    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-arrow-left me-1"></i> Volver
-                    </a>
-                </div>
-            </div>
+<div class="container mx-auto px-4 sm:px-8">
+    <h2 class="my-4 text-2xl font-bold font-poppins text-primary flex items-center"><i class="fas fa-calendar-alt mr-2 text-blue-500"></i>Gestión de Citas</h2>
+    <div class="card mb-4 shadow-lg rounded-xl overflow-hidden">
+        <div class="card-header bg-primary text-white p-4 flex items-center justify-between rounded-t-xl">
+            <h5 class="mb-0 text-lg font-bold font-poppins flex items-center"><i class="fas fa-clock mr-2"></i>Citas Pendientes</h5>
+            <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-outline-secondary" title="Volver al dashboard">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+        <div class="card-body p-4">
+            <div class="table-responsive overflow-x-auto">
+                <table class="table table-hover w-full min-w-[600px]">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>ID</th>
-                            <th>Paciente</th>
-                            <th>Documento</th>
-                            <th>Fecha/Hora</th>
-                            <th>Acciones</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">ID</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Paciente</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Documento</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Fecha/Hora</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for cita in citas_pendientes %}
-                        <tr>
-                            <td>{{ cita.id }}</td>
-                            <td>{{ cita.paciente.nombre_completo }}</td>
-                            <td>{{ cita.paciente.numero_identificacion }}</td>
-                            <td>{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
-                            <td>
-                                <div class="btn-group btn-group-sm">
+                        <tr class="hover:bg-blue-50 transition-colors">
+                            <td class="px-4 py-2">{{ cita.id }}</td>
+                            <td class="px-4 py-2 font-poppins">{{ cita.paciente.nombre_completo }}</td>
+                            <td class="px-4 py-2 font-poppins">{{ cita.paciente.numero_identificacion }}</td>
+                            <td class="px-4 py-2 font-poppins"><i class="fas fa-calendar-day text-gray-400 mr-1"></i>{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td class="px-4 py-2">
+                                <div class="flex flex-row flex-wrap gap-2">
                                     <form method="POST" action="{{ url_for('decision_cita', cita_id=cita.id) }}" style="display: inline;">
                                         <input type="hidden" name="decision" value="aceptar">
                                         <button type="submit" class="btn btn-sm btn-success" title="Aprobar cita">
@@ -63,7 +58,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center">No hay citas pendientes</td>
+                            <td colspan="5" class="text-center font-poppins">No hay citas pendientes</td>
                         </tr>
                         {% endfor %}
                     </tbody>

@@ -1,35 +1,143 @@
 {% extends 'base.html' %}
 
+{% block title %}Iniciar Sesión - Clínica Mentalmente{% endblock %}
+
+{% block extra_css %}
+<style>
+    .login-card {
+        animation: fadeInUp 1s cubic-bezier(0.23, 1, 0.32, 1);
+        box-shadow: 0 10px 25px 0 rgba(59,130,246,0.08), 0 1.5px 4px 0 rgba(0,0,0,0.04);
+        transition: box-shadow 0.3s;
+    }
+    .login-card:hover {
+        box-shadow: 0 20px 40px 0 rgba(59,130,246,0.15), 0 3px 8px 0 rgba(0,0,0,0.08);
+    }
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .input-anim:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px #60a5fa33;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .btn-anim {
+        transition: background 0.2s, transform 0.2s;
+    }
+    .btn-anim:hover {
+        background: #2563eb;
+        transform: translateY(-2px) scale(1.03);
+    }
+    .password-wrapper {
+        position: relative;
+    }
+    .password-wrapper input {
+        padding-right: 2.5rem;
+    }
+    .toggle-password-btn {
+        position: absolute;
+        right: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        cursor: pointer;
+        color: #94a3b8;
+        height: 2rem;
+        width: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .toggle-password-btn:focus {
+        outline: none;
+        color: #2563eb;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="flex items-center justify-center min-h-screen bg-gray-100">
-    <div class="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md card fade-in slide-in">
-        <div class="text-center">
-            <h2 class="text-3xl font-bold text-gray-900">Iniciar Sesión</h2>
-            <p class="mt-2 text-sm text-gray-600">Accede a tu cuenta para gestionar tus citas.</p>
+<div class="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-100 via-white to-yellow-50">
+    <div class="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl login-card relative overflow-hidden">
+        <div class="flex flex-col items-center">
+            <img src="{{ url_for('static', filename='img/LOGO-MENTALMENTE.png') }}" alt="Logo" class="h-16 w-auto mb-2 animate-bounce-slow">
+            <h2 class="text-3xl font-extrabold text-blue-900 mb-1 tracking-tight">Bienvenido</h2>
+            <p class="text-gray-500 text-sm mb-4">Accede a tu cuenta de administrador o psicólogo</p>
         </div>
-        <form class="mt-8 space-y-6" method="POST">
-            <div class="rounded-md shadow-sm -space-y-px">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="p-2 mb-2 text-sm rounded-lg {{ 'bg-blue-100 text-blue-700' if category=='success' else 'bg-red-100 text-red-700' }} animate-fade-in">
+                        <span class="font-medium">{{ category|capitalize }}:</span> {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <form class="space-y-6" method="POST" id="loginForm" autocomplete="on">
+            <div class="space-y-4">
                 <div>
-                    <label for="email" class="sr-only">Correo electrónico</label>
-                    <input id="email" name="email" type="email" autocomplete="email" required
-                           class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                           placeholder="Correo electrónico">
+                    <label for="email" class="block text-sm font-medium text-gray-700">Correo electrónico</label>
+                    <input id="email" name="email" type="email" required autocomplete="email" class="input-anim block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="correo@ejemplo.com">
                 </div>
                 <div>
-                    <label for="password" class="sr-only">Contraseña</label>
-                    <input id="password" name="password" type="password" autocomplete="current-password" required
-                           class="relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                           placeholder="Contraseña">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                    <div class="password-wrapper">
+                        <input id="password" name="password" type="password" required autocomplete="current-password" class="input-anim block w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition" placeholder="••••••••">
+                        <button type="button" id="togglePassword" class="toggle-password-btn" tabindex="-1">
+                            <i class="fa fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-
             <div>
-                <button type="submit"
-                        class="group relative flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                    Ingresar
-                </button>
+                <button type="submit" class="btn-anim w-full py-2 px-4 bg-blue-500 text-white font-bold rounded-lg shadow hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 text-lg">Iniciar Sesión</button>
             </div>
         </form>
     </div>
 </div>
-{% endblock %} 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Animación lenta para el logo
+const logo = document.querySelector('.animate-bounce-slow');
+if (logo) {
+    logo.animate([
+        { transform: 'translateY(0)' },
+        { transform: 'translateY(-10px)' },
+        { transform: 'translateY(0)' }
+    ], {
+        duration: 2000,
+        iterations: Infinity
+    });
+}
+// Mostrar/ocultar contraseña
+const togglePassword = document.getElementById('togglePassword');
+const passwordInput = document.getElementById('password');
+if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', function() {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.querySelector('i').classList.toggle('fa-eye');
+        this.querySelector('i').classList.toggle('fa-eye-slash');
+    });
+}
+// Animación de entrada para mensajes flash
+const flashMessages = document.querySelectorAll('.animate-fade-in');
+flashMessages.forEach(msg => {
+    msg.animate([
+        { opacity: 0, transform: 'translateY(-10px)' },
+        { opacity: 1, transform: 'translateY(0)' }
+    ], {
+        duration: 600,
+        fill: 'forwards'
+    });
+});
+</script>
+{% endblock %}
+
+{% block header %}{% endblock %}
+{% block full_width_content %}{% endblock %}
+{% block footer %}{% endblock %} 

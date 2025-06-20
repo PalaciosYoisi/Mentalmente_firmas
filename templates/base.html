@@ -20,6 +20,7 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-gray-100 text-gray-800 font-sans">
+    {% block header %}
     <!-- Barra de navegación -->
     <header class="bg-white shadow-md">
         <nav x-data="{ open: false }" class="container mx-auto px-6 py-3 flex items-center justify-between">
@@ -43,7 +44,7 @@
                     {% if session.admin_logged_in or session.psicologo_id %}
                         <a href="{{ url_for('logout') }}" class="py-2 text-gray-700 hover:text-blue-500">Cerrar Sesión</a>
                     {% else %}
-                        <a href="{{ url_for('admin_login') }}" class="py-2 text-gray-700 hover:text-blue-500">Iniciar Sesión</a>
+                        <a href="{{ url_for('login') }}" class="py-2 text-gray-700 hover:text-blue-500">Iniciar Sesión</a>
                     {% endif %}
                 </div>
         </nav>
@@ -57,10 +58,11 @@
                 {% if session.admin_logged_in or session.psicologo_id %}
                     <a href="{{ url_for('logout') }}" class="block py-2 text-gray-700 hover:text-blue-500">Cerrar Sesión</a>
                 {% else %}
-                    <a href="{{ url_for('admin_login') }}" class="block py-2 text-gray-700 hover:text-blue-500">Iniciar Sesión</a>
+                    <a href="{{ url_for('login') }}" class="block py-2 text-gray-700 hover:text-blue-500">Iniciar Sesión</a>
                 {% endif %}
             </div>
     </header>
+    {% endblock %}
 
     <!-- Contenido principal -->
     <main class="container mx-auto my-8 px-6">
@@ -82,6 +84,7 @@
     <!-- Bloque para contenido de ancho completo fuera del contenedor principal -->
     {% block full_width_content %}{% endblock %}
 
+    {% block footer %}
     <!-- Pie de página -->
     <footer>
         <div class="container mx-auto text-center">
@@ -93,8 +96,10 @@
             </div>
         </div>
     </footer>
+    {% endblock %}
     
     <!-- Scripts personalizados -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

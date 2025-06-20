@@ -3,28 +3,50 @@
 {% block title %}Detalle de Cita{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2 class="my-4">Detalle de Cita</h2>
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Cita #{{ cita.id }}</h5>
+<div class="container mx-auto px-4 sm:px-8">
+    <h2 class="my-4 text-2xl font-bold font-poppins text-primary flex items-center"><i class="fas fa-info-circle mr-2 text-blue-500"></i>Detalle de Cita</h2>
+    <div class="card mb-4 shadow-lg rounded-xl overflow-hidden">
+        <div class="card-header bg-primary text-white p-4 flex items-center rounded-t-xl">
+            <h5 class="mb-0 text-lg font-bold font-poppins flex items-center"><i class="fas fa-calendar-check mr-2"></i>Cita #{{ cita.id }}</h5>
         </div>
-        <div class="card-body">
-            <dl class="row">
-                <dt class="col-sm-3">Paciente</dt>
-                <dd class="col-sm-9">{{ cita.paciente.nombre_completo }}</dd>
-                <dt class="col-sm-3">Documento</dt>
-                <dd class="col-sm-9">{{ cita.paciente.numero_identificacion }}</dd>
-                <dt class="col-sm-3">Psicólogo</dt>
-                <dd class="col-sm-9">{{ cita.psicologo.nombre_completo }}</dd>
-                <dt class="col-sm-3">Fecha y Hora</dt>
-                <dd class="col-sm-9">{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</dd>
-                <dt class="col-sm-3">Estado</dt>
-                <dd class="col-sm-9">{{ cita.estado|capitalize }}</dd>
-                <dt class="col-sm-3">Tipo de Consulta</dt>
-                <dd class="col-sm-9">{{ cita.tipo_consulta }}</dd>
+        <div class="card-body p-6">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <dt class="font-semibold font-poppins text-gray-700 flex items-center"><i class="fas fa-user mr-2 text-blue-400"></i>Paciente</dt>
+                    <dd class="ml-6 font-poppins">{{ cita.paciente.nombre_completo }}</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold font-poppins text-gray-700 flex items-center"><i class="fas fa-id-card mr-2 text-yellow-400"></i>Documento</dt>
+                    <dd class="ml-6 font-poppins">{{ cita.paciente.numero_identificacion }}</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold font-poppins text-gray-700 flex items-center"><i class="fas fa-user-md mr-2 text-green-400"></i>Psicólogo</dt>
+                    <dd class="ml-6 font-poppins">{{ cita.psicologo.nombre_completo }}</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold font-poppins text-gray-700 flex items-center"><i class="fas fa-calendar-day mr-2 text-gray-400"></i>Fecha y Hora</dt>
+                    <dd class="ml-6 font-poppins">{{ cita.fecha_hora.strftime('%d/%m/%Y %H:%M') }}</dd>
+                </div>
+                <div>
+                    <dt class="font-semibold font-poppins text-gray-700 flex items-center"><i class="fas fa-info-circle mr-2 text-blue-500"></i>Estado</dt>
+                    <dd class="ml-6 font-poppins">
+                        <span class="badge px-3 py-1 rounded-full text-xs font-bold font-poppins cursor-pointer"
+                            title="{{ cita.estado|capitalize }}"
+                            {% if cita.estado == 'pendiente' %}style="background:#FEF3C7;color:#B45309;"
+                            {% elif cita.estado == 'aceptada' %}style="background:#D1FAE5;color:#065F46;"
+                            {% elif cita.estado == 'rechazada' %}style="background:#FECACA;color:#991B1B;"
+                            {% elif cita.estado == 'completada' %}style="background:#DBEAFE;color:#1E40AF;"
+                            {% else %}style="background:#F3F4F6;color:#374151;"{% endif %}>
+                            <i class="fas fa-circle mr-1 text-xs"></i>{{ cita.estado|capitalize }}
+                        </span>
+                    </dd>
+                </div>
+                <div>
+                    <dt class="font-semibold font-poppins text-gray-700 flex items-center"><i class="fas fa-stethoscope mr-2 text-accent"></i>Tipo de Consulta</dt>
+                    <dd class="ml-6 font-poppins">{{ cita.tipo_consulta }}</dd>
+                </div>
             </dl>
-            <a href="{{ url_for('admin_citas') }}" class="btn btn-secondary">Volver</a>
+            <a href="{{ url_for('admin_citas') }}" class="btn btn-secondary mt-6"><i class="fas fa-arrow-left mr-2"></i>Volver</a>
         </div>
     </div>
 </div>

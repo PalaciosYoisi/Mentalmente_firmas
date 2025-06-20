@@ -5,11 +5,14 @@ from datetime import datetime, date
 import base64
 import re
 import os
+import io
 import secrets
 import logging
 from dotenv import load_dotenv
-from models import db, Paciente, Psicologo, Cita, Consentimiento, Usuario, Tutor
+from models import db, Paciente, Psicologo, Cita, Consentimiento, Usuario, Tutor, PacientesUsuarios
 from typing import List, Tuple, Any, Sequence
+from werkzeug.security import generate_password_hash, check_password_hash
+from PIL import Image
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -67,42 +70,73 @@ def calcular_edad(fecha_nacimiento):
     hoy = date.today()
     return hoy.year - fecha_nacimiento.year - ((hoy.month, hoy.day) < (fecha_nacimiento.month, fecha_nacimiento.day))
 
-def enviar_correo_firma(cita):
+def enviar_correo_confirmacion_y_credenciales(cita, password):
     try:
-        # Si el paciente tiene tutor, enviar al tutor, si no al paciente
         if hasattr(cita.paciente, 'tutor') and cita.paciente.tutor:
             recipients = [cita.paciente.tutor.email]
+            nombre_destinatario = cita.paciente.tutor.nombre_completo
         else:
             recipients = [cita.paciente.email]
+            nombre_destinatario = cita.paciente.nombre_completo
+
         msg = Message(
-            "Firma de Consentimiento - Clínica Mentalmente",
+            "Confirmación de Cita y Credenciales de Acceso - Clínica Mentalmente",
             sender=app.config['MAIL_DEFAULT_SENDER'],
             recipients=recipients
         )
-        link_firma = url_for('firmar_consentimiento', token=cita.token_firma, _external=True)
+        
+        login_url = url_for('login_paciente', _external=True)
+
         msg.html = f"""
-        <h3>Hola {cita.paciente.nombre_completo},</h3>
-        <p>Tu cita con {cita.psicologo.nombre_completo} ha sido confirmada para el {cita.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}.</p>
-        <p>Por favor firma el consentimiento informado en el siguiente enlace:</p>
-        <a href=\"{link_firma}\">Firmar Consentimiento</a>
+        <h3>Hola {nombre_destinatario},</h3>
+        <p>Tu cita con <strong>{cita.psicologo.nombre_completo}</strong> ha sido confirmada para el <strong>{cita.fecha_hora.strftime('%d/%m/%Y a las %H:%M')}</strong>.</p>
+        <p>Hemos creado una cuenta para que puedas gestionar tu cita y firmar el consentimiento informado de forma segura.</p>
+        <p><strong>Tus credenciales de acceso son:</strong></p>
+        <ul>
+            <li><strong>Usuario:</strong> {cita.paciente.email}</li>
+            <li><strong>Contraseña Temporal:</strong> {password}</li>
+        </ul>
+        <p>Por favor, inicia sesión en nuestro portal para firmar el consentimiento antes de tu cita:</p>
+        <a href="{login_url}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Iniciar Sesión y Firmar Consentimiento</a>
+        <p>Si tienes algún problema, no dudes en contactarnos.</p>
         <p>Saludos,<br>Equipo Clínica Mentalmente</p>
         """
         mail.send(msg)
-        logger.info(f"Correo de firma enviado a {recipients}")
+        logger.info(f"Correo de confirmación y credenciales enviado a {recipients}")
+        return True
+    except Exception as e:
+        logger.error(f"Error al enviar correo de confirmación: {str(e)}")
+        flash('La cita fue aceptada, pero hubo un problema al enviar el correo de confirmación.', 'danger')
+        return False
+
+def enviar_correo_firma(cita):
+    try:
+        msg = Message(
+            "Consentimiento listo para firma - Clínica Mentalmente",
+            sender=app.config['MAIL_DEFAULT_SENDER'],
+            recipients=[cita.paciente.email]
+        )
+        
+        msg.html = f"""
+        <h3>Hola {cita.paciente.nombre_completo},</h3>
+        <p>El consentimiento para tu cita del {cita.fecha_hora.strftime('%d/%m/%Y a las %H:%M')} está listo para ser firmado.</p>
+        <p>Por favor, accede a tu panel para completar la firma.</p>
+        <p>Saludos,<br>Equipo Clínica Mentalmente</p>
+        """
+        
+        mail.send(msg)
+        logger.info(f"Correo de firma enviado a {cita.paciente.email}")
         return True
     except Exception as e:
         logger.error(f"Error al enviar correo de firma: {str(e)}")
-        print(f"[ERROR ENVÍO CORREO FIRMA] {str(e)}")
-        flash(f'La cita fue aceptada, pero hubo un problema al enviar el correo al paciente. Error SMTP: {str(e)}', 'danger')
         return False
 
 def generar_pdf_paciente(cita, firma_paciente):
     pdf = PDF(orientation='P', unit='mm', format='A4')
+    pdf.set_margins(25, 25, 25)  # Márgenes consistentes
     pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=20)
-    pdf.set_margins(25, 25, 25)
-    
-    pdf.ln(25) # Espacio para el header
+    pdf.set_auto_page_break(auto=True, margin=25)
+    pdf.ln(15)  # Espacio para el header
     
     # Título
     pdf.set_font("Arial", 'B', 12)
@@ -145,7 +179,7 @@ Autorizo con la firma de este documento que mi historia clínica sea suministrad
     # Sección de manejo de datos
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 8, "MANEJO DE DATOS PERSONALES", ln=1, align='C')
-    pdf.ln(5)
+    pdf.ln(15)
     pdf.set_font("Arial", '', 11)
     
     texto_datos_1 = "Declaro de manera libre, expresa, inequívoca e informada, que AUTORIZO a él profesional en psicología "
@@ -161,7 +195,7 @@ Declaro que se me ha informado de manera clara y comprensible que tengo derecho 
 Declaro que conozco y acepto el manual de tratamiento de datos personales de MentalMente Psicología Especializada y que la información por mí proporcionada es veraz, completa, exacta, actualizada y verificable. Mediante la firma del presente documento, manifiesto que reconozco y acepto que cualquier consulta o reclamación relacionada con el tratamiento de mis datos personales"""
     pdf.ln()
     pdf.multi_cell(0, 5, texto_datos_2, align='J')
-    pdf.ln(5)
+    pdf.ln(15)
     
     # Fecha y firma
     meses = {"January": "enero", "February": "febrero", "March": "marzo", "April": "abril", "May": "mayo", "June": "junio", "July": "julio", "August": "agosto", "September": "septiembre", "October": "octubre", "November": "noviembre", "December": "diciembre"}
@@ -179,63 +213,65 @@ Declaro que conozco y acepto el manual de tratamiento de datos personales de Men
     
     # Tabla de firmas
     pdf.ln(10)
-    pdf.set_font("Arial", 'B', 11)
-    
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_text_color(30, 30, 30)
     col_width_name = 80
     col_width_firma = 50
     col_width_fecha = 30
-    
-    pdf.cell(col_width_name, 8, "Nombres y apellidos del paciente*", border=1)
-    pdf.cell(col_width_firma, 8, "Firma", border=1)
-    pdf.cell(col_width_fecha, 8, "Fecha", border=1, ln=1)
-    
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(col_width_name, 20, f"{cita.paciente.nombre_completo}", border=1)
-    
+    pdf.cell(col_width_name, 10, "Nombres y apellidos del paciente*", border=1, align='C')
+    pdf.cell(col_width_firma, 10, "Firma", border=1, align='C')
+    pdf.cell(col_width_fecha, 10, "Fecha", border=1, ln=1, align='C')
+    pdf.set_font("Arial", '', 12)
+    pdf.set_text_color(20, 20, 20)
+    pdf.cell(col_width_name, 20, f"{cita.paciente.nombre_completo}", border=1, align='C')
     firma_path = f"static/firmas/firma_{cita.id}.png"
     with open(firma_path, "wb") as f:
         f.write(base64.b64decode(re.sub('^data:image/.+;base64,', '', firma_paciente)))
     x, y = pdf.get_x(), pdf.get_y()
     pdf.cell(col_width_firma, 20, "", border=1)
     pdf.image(firma_path, x=x+2.5, y=y+2, w=45, h=16)
-    pdf.set_font("Arial", '', 11)
     pdf.cell(col_width_fecha, 20, f"{fecha_actual.strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(col_width_name, 8, f"C.C: {cita.paciente.numero_identificacion}", border=1)
-    pdf.cell(col_width_firma, 8, "", border=1)
-    pdf.cell(col_width_fecha, 8, "", border=1, ln=1)
+    pdf.set_font("Arial", '', 11)
+    pdf.set_text_color(30, 30, 30)
+    pdf.cell(col_width_name, 10, f"C.C: {cita.paciente.numero_identificacion}", border=1, align='C')
+    pdf.cell(col_width_firma, 10, "", border=1)
+    pdf.cell(col_width_fecha, 10, "", border=1, ln=1)
     pdf.ln(10)
 
     # Si existe tutor, agregar fila de responsable
     if hasattr(cita.paciente, 'tutor') and cita.paciente.tutor:
         tutor = cita.paciente.tutor
         pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 8, "Nombres y apellidos del Responsable del Paciente", border=1)
-        pdf.cell(col_width_firma, 8, "Ciudad", border=1)
-        pdf.cell(col_width_fecha, 8, "Fecha", border=1, ln=1)
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 20, f"{tutor.nombre_completo}", border=1)
-        pdf.cell(col_width_firma, 20, f"{tutor.ciudad}", border=1)
-        pdf.cell(col_width_fecha, 20, f"{fecha_actual.strftime('%Y-%m-%d')}", border=1, ln=1)
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 8, f"C.C: {tutor.numero_identificacion}", border=1)
-        pdf.cell(col_width_firma, 8, "", border=1)
-        pdf.cell(col_width_fecha, 8, "", border=1, ln=1)
+        pdf.cell(col_width_name, 10, "Nombres y apellidos del Responsable del Paciente", border=1, align='C')
+        pdf.cell(col_width_firma, 10, "Ciudad", border=1, align='C')
+        pdf.cell(col_width_fecha, 10, "Fecha", border=1, ln=1, align='C')
+        pdf.set_font("Arial", '', 11)
+        pdf.set_text_color(20, 20, 20)
+        pdf.cell(col_width_name, 20, f"{tutor.nombre_completo}", border=1, align='C')
+        pdf.cell(col_width_firma, 20, f"{tutor.ciudad}", border=1, align='C')
+        pdf.cell(col_width_fecha, 20, f"{fecha_actual.strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
+        pdf.set_font("Arial", '', 11)
+        pdf.set_text_color(30, 30, 30)
+        pdf.cell(col_width_name, 10, f"C.C: {tutor.numero_identificacion}", border=1, align='C')
+        pdf.cell(col_width_firma, 10, "", border=1)
+        pdf.cell(col_width_fecha, 10, "", border=1, ln=1)
         pdf.ln(10)
 
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(col_width_name, 8, "Profesional", border=1)
-    pdf.cell(col_width_firma, 8, "Firma", border=1)
-    pdf.cell(col_width_fecha, 8, "Fecha", border=1, ln=1)
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(col_width_name, 20, f"{cita.psicologo.nombre_completo}", border=1)
+    pdf.cell(col_width_name, 10, "Profesional", border=1, align='C')
+    pdf.cell(col_width_firma, 10, "Firma", border=1, align='C')
+    pdf.cell(col_width_fecha, 10, "Fecha", border=1, ln=1, align='C')
+    pdf.set_font("Arial", '', 11)
+    pdf.set_text_color(20, 20, 20)
+    pdf.cell(col_width_name, 20, f"{cita.psicologo.nombre_completo}", border=1, align='C')
     pdf.cell(col_width_firma, 20, "", border=1)
     pdf.set_font("Arial", '', 11)
-    pdf.cell(col_width_fecha, 20, "", border=1, ln=1)
+    pdf.cell(col_width_fecha, 20, "", border=1, ln=1, align='C')
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(col_width_name, 8, f"C.C: {getattr(cita.psicologo, 'numero_identificacion', '')}", border=1)
-    pdf.cell(col_width_firma, 8, "", border=1)
-    pdf.cell(col_width_fecha, 8, "", border=1, ln=1)
+    pdf.set_text_color(30, 30, 30)
+    pdf.cell(col_width_name, 10, f"C.C: {getattr(cita.psicologo, 'numero_identificacion', '')}", border=1, align='C')
+    pdf.cell(col_width_firma, 10, "", border=1)
+    pdf.cell(col_width_fecha, 10, "", border=1, ln=1)
     
     if not os.path.exists('pdfs'):
         os.makedirs('pdfs')
@@ -246,18 +282,21 @@ Declaro que conozco y acepto el manual de tratamiento de datos personales de Men
 def generar_pdf_final(consentimiento, firma_psicologo):
     try:
         pdf = PDF(orientation='P', unit='mm', format='A4')
-        pdf.add_page()
-        pdf.set_auto_page_break(auto=True, margin=20)
         pdf.set_margins(25, 25, 25)
-        
-        pdf.ln(25)
-        
-        pdf.set_font("Arial", 'B', 12)
+        pdf.add_page()
+        pdf.set_auto_page_break(auto=True, margin=25)
+        # Margen superior igual en todas las páginas
+        pdf.ln(15)
+        # Fuente Calibri si está disponible, si no Arial
+        try:
+            pdf.add_font('Calibri', '', 'static/fonts/calibri.ttf', uni=True)
+            font_main = 'Calibri'
+        except:
+            font_main = 'Arial'
+        pdf.set_font(font_main, 'B', 12)
         pdf.multi_cell(0, 5, "AUTORIZAR PROCESO PSICOLÓGICO E INFORMACIÓN A TERCEROS", 0, 'C')
         pdf.ln(15)
-        
-        pdf.set_font("Arial", '', 11)
-        
+        pdf.set_font(font_main, '', 10)
         pdf.write(5, "Yo ")
         pdf.set_font('', 'B')
         pdf.write(5, f"{consentimiento.cita.paciente.nombre_completo}")
@@ -266,17 +305,15 @@ def generar_pdf_final(consentimiento, firma_psicologo):
         pdf.set_font('', 'B')
         pdf.write(5, f"{consentimiento.cita.paciente.numero_identificacion}")
         pdf.set_font('', '')
-        ciudad = getattr(consentimiento.cita.psicologo, 'ciudad', '')
+        ciudad = getattr(consentimiento.cita.psicologo, 'ciudad', '') or getattr(consentimiento.cita.paciente, 'ciudad', '')
         if ciudad:
             pdf.write(5, f" de {ciudad}")
-        
         pdf.write(5, ", en pleno uso de mis facultades legales y mentales, de manera consciente y sin ninguna clase de presión, faculto y autorizo al profesional en psicología ")
         pdf.set_font('', 'B')
         pdf.write(5, f"{consentimiento.cita.psicologo.nombre_completo}")
         pdf.set_font('', '')
         pdf.write(5, ", para que realice proceso de evaluación, diagnóstico, pronóstico, tratamiento, asesoría y orientación psicológica. Igualmente advierto que se me ha puesto en conocimiento, y acepto las terapias y procedimientos que el terapeuta considere son las adecuadas para mi condición psicológica o la del niño que represento.")
         pdf.ln(10)
-
         texto_largo = """También se me ha ilustrado de manera clara y precisa, sobre: Rol del terapeuta, sus cualificaciones y alcances profesionales, los procedimientos terapéuticos y sus propósitos, las incomodidades o riesgos potenciales que se pueden derivar del proceso, los beneficios razonables que se pueden esperar acorde a mi participación, asistencia y compromiso con el proceso sean los indicados, alternativas posibles a la terapia dentro de la disciplina científica y los recursos del medio para brindarme apoyo, que puedo retirarme del proceso en cualquier momento, los límites de la confidencialidad y manejo de información de datos según disposiciones de ley.
 
 Además, se me informo así mismo, que al venir a proceso psicológico estoy aceptando un servicio para el cual debo suministrar la información necesaria para obtener beneficios del proceso, lo relacionado con el funcionamiento del proceso psicológico, las posibilidades de mejoramiento, la duración del tratamiento y la aplicación de técnicas y pruebas psicológicas pertinentes.
@@ -288,18 +325,15 @@ Además, se me informo así mismo, que al venir a proceso psicológico estoy ace
 Autorizo con la firma de este documento que mi historia clínica sea suministrada a terceros en caso de que sea requerida para fines terapéuticos y/o jurídicos, según las disposiciones de ley."""
         pdf.multi_cell(0, 5, texto_largo, align='J')
         pdf.ln(10)
-        
-        pdf.set_font("Arial", 'B', 12)
+        pdf.set_font(font_main, 'B', 12)
         pdf.cell(0, 8, "MANEJO DE DATOS PERSONALES", ln=1, align='C')
         pdf.ln(5)
-        pdf.set_font("Arial", '', 11)
-        
+        pdf.set_font(font_main, '', 10)
         texto_datos_1 = "Declaro de manera libre, expresa, inequívoca e informada, que AUTORIZO a él profesional en psicología "
         pdf.write(5, texto_datos_1)
         pdf.set_font('', 'B')
         pdf.write(5, f"{consentimiento.cita.psicologo.nombre_completo}")
         pdf.set_font('', '')
-        
         texto_datos_2 = """ para que, en los términos del literal a) del artículo 6 de la Ley 1581 de 2012, realice la recolección, almacenamiento, uso, circulación, supresión, y en general, tratamiento de mis datos personales, incluyendo datos sensibles, como la historia clínica y demás datos que puedan llegar a ser considerados como sensibles de conformidad con la Ley, para que dicho Tratamiento se realice con el fin de lograr las finalidades relativas a ejecutar el control, seguimiento, monitoreo, vigilancia y, en general, garantizar la seguridad de sus instalaciones; así como para documentar las actividades gremiales.
 
 Declaro que se me ha informado de manera clara y comprensible que tengo derecho a conocer, actualizar y rectificar los datos personales proporcionados, a solicitar prueba de esta autorización, a solicitar información sobre el uso que se le ha dado a mis datos personales, a presentar quejas ante la Superintendencia de Industria y comercio por el uso indebido de mis datos personales, a revocar esta autorización o solicitar la supresión de los datos personales suministrados y a acceder de forma gratuita a los mismos.
@@ -308,14 +342,12 @@ Declaro que conozco y acepto el manual de tratamiento de datos personales de Men
         pdf.ln()
         pdf.multi_cell(0, 5, texto_datos_2, align='J')
         pdf.ln(5)
-        
         meses = {"January": "enero", "February": "febrero", "March": "marzo", "April": "abril", "May": "mayo", "June": "junio", "July": "julio", "August": "agosto", "September": "septiembre", "October": "octubre", "November": "noviembre", "December": "diciembre"}
         fecha_actual = datetime.now()
         nombre_mes_ingles = fecha_actual.strftime('%B')
         nombre_mes = meses.get(nombre_mes_ingles, nombre_mes_ingles)
-        
         pdf.write(5, "Acepto las condiciones que se me presentan en este documento, dado en ")
-        ciudad = getattr(consentimiento.cita.psicologo, 'ciudad', '')
+        ciudad = getattr(consentimiento.cita.psicologo, 'ciudad', '') or getattr(consentimiento.cita.paciente, 'ciudad', '')
         if ciudad:
             pdf.set_font('', 'B')
             pdf.write(5, f"{ciudad}")
@@ -323,66 +355,98 @@ Declaro que conozco y acepto el manual de tratamiento de datos personales de Men
         else:
             pdf.write(5, "__________")
         pdf.write(5, f", el día {fecha_actual.strftime('%d')} del mes de {nombre_mes} del año {fecha_actual.strftime('%Y')}")
-
         pdf.ln(8)
         pdf.cell(0, 5, "Para constancia se firma la conformidad.", ln=1)
-        
-        # Tabla de firmas
+        # Tablas de firmas
         pdf.ln(10)
-        pdf.set_font("Arial", 'B', 11)
-        
+        pdf.set_font(font_main, 'B', 10)
+        pdf.set_text_color(30, 30, 30)
         col_width_name = 80
         col_width_firma = 50
         col_width_fecha = 30
-
-        pdf.cell(col_width_name, 8, "Nombres y apellidos del paciente*", border=1)
-        pdf.cell(col_width_firma, 8, "Firma", border=1)
-        pdf.cell(col_width_fecha, 8, "Fecha", border=1, ln=1)
-        
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 20, f"{consentimiento.cita.paciente.nombre_completo}", border=1)
-        
-        firma_paciente_path = f"static/firmas/firma_{consentimiento.cita.id}.png"
-        x, y = pdf.get_x(), pdf.get_y()
-        pdf.cell(col_width_firma, 20, "", border=1)
-        pdf.image(firma_paciente_path, x=x+2.5, y=y+2, w=45, h=16)
-        
-        pdf.set_font("Arial", '', 11)
-        pdf.cell(col_width_fecha, 20, f"{consentimiento.fecha_firma_paciente.strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
-        
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 8, f"C.C: {consentimiento.cita.paciente.numero_identificacion}", border=1)
-        pdf.cell(col_width_firma, 8, "", border=1)
-        pdf.cell(col_width_fecha, 8, "", border=1, ln=1)
-        
+        cell_height = 15
+        # Paciente
+        pdf.cell(col_width_name, cell_height, "Nombres y apellidos del paciente*", border=1, align='C')
+        pdf.cell(col_width_firma, cell_height, "Firma", border=1, align='C')
+        pdf.cell(col_width_fecha, cell_height, "Fecha", border=1, ln=1, align='C')
+        pdf.set_font(font_main, '', 10)
+        pdf.set_text_color(20, 20, 20)
+        if hasattr(consentimiento.cita.paciente, 'tutor') and consentimiento.cita.paciente.tutor:
+            pdf.cell(col_width_name, cell_height, f"{consentimiento.cita.paciente.nombre_completo}", border=1, align='C')
+            pdf.cell(col_width_firma, cell_height, "", border=1)
+            pdf.cell(col_width_fecha, cell_height, "", border=1, ln=1, align='C')
+            pdf.cell(col_width_name, cell_height, f"C.C: {consentimiento.cita.paciente.numero_identificacion}", border=1, align='C')
+            pdf.cell(col_width_firma, cell_height, "", border=1)
+            pdf.cell(col_width_fecha, cell_height, "", border=1, ln=1)
+        else:
+            pdf.cell(col_width_name, cell_height, f"{consentimiento.cita.paciente.nombre_completo}", border=1, align='C')
+            firma_paciente_path = f"static/firmas/firma_{consentimiento.cita.id}.png"
+            x, y = pdf.get_x(), pdf.get_y()
+            pdf.cell(col_width_firma, cell_height, "", border=1)
+            pdf.image(firma_paciente_path, x=x+2.5, y=y+2, w=45, h=cell_height-4)
+            pdf.cell(col_width_fecha, cell_height, f"{consentimiento.fecha_firma_paciente.strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
+            pdf.cell(col_width_name, cell_height, f"C.C: {consentimiento.cita.paciente.numero_identificacion}", border=1, align='C')
+            pdf.cell(col_width_firma, cell_height, "", border=1)
+            pdf.cell(col_width_fecha, cell_height, "", border=1, ln=1)
         pdf.ln(10)
+        # Responsable/tutor
+        if hasattr(consentimiento.cita.paciente, 'tutor') and consentimiento.cita.paciente.tutor:
+            tutor = consentimiento.cita.paciente.tutor
+            pdf.set_font(font_main, 'B', 10)
+            pdf.cell(col_width_name, cell_height, "Nombres y apellidos del Responsable del Paciente", border=1, align='C')
+            pdf.cell(col_width_firma, cell_height, "Firma", border=1, align='C')
+            pdf.cell(col_width_fecha, cell_height, "Fecha", border=1, ln=1, align='C')
+            pdf.set_font(font_main, '', 10)
+            pdf.set_text_color(20, 20, 20)
+            pdf.cell(col_width_name, cell_height, f"{tutor.nombre_completo}", border=1, align='C')
+            firma_tutor_path = f"static/firmas/firma_psicologo_{consentimiento.cita.id}.png"
+            x, y = pdf.get_x(), pdf.get_y()
+            pdf.cell(col_width_firma, cell_height, "", border=1)
+            pdf.image(firma_tutor_path, x=x+2.5, y=y+2, w=45, h=cell_height-4)
+            pdf.cell(col_width_fecha, cell_height, f"{fecha_actual.strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
+            pdf.cell(col_width_name, cell_height, f"C.C: {tutor.numero_identificacion}", border=1, align='C')
+            pdf.cell(col_width_firma, cell_height, "", border=1)
+            pdf.cell(col_width_fecha, cell_height, "", border=1, ln=1)
+            pdf.ln(10)
+        # Profesional
+        pdf.set_font(font_main, 'B', 10)
+        pdf.cell(col_width_name, cell_height, "Profesional", border=1, align='C')
+        pdf.cell(col_width_firma, cell_height, "Firma", border=1, align='C')
+        pdf.cell(col_width_fecha, cell_height, "Fecha", border=1, ln=1, align='C')
+        pdf.set_font(font_main, '', 10)
+        pdf.set_text_color(20, 20, 20)
+        pdf.cell(col_width_name, cell_height, f"{consentimiento.cita.psicologo.nombre_completo}", border=1, align='C')
         
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 8, "Profesional", border=1)
-        pdf.cell(col_width_firma, 8, "Firma", border=1)
-        pdf.cell(col_width_fecha, 8, "Fecha", border=1, ln=1)
-        
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 20, f"{consentimiento.cita.psicologo.nombre_completo}", border=1)
-        
-        firma_psicologo_path = f"static/firmas/firma_psicologo_{consentimiento.cita.id}.png"
-        with open(firma_psicologo_path, "wb") as f:
-            f.write(base64.b64decode(re.sub('^data:image/.+;base64,', '', firma_psicologo)))
+        # Usar la firma del psicólogo que se pasa como parámetro
         x, y = pdf.get_x(), pdf.get_y()
-        pdf.cell(col_width_firma, 20, "", border=1)
-        pdf.image(firma_psicologo_path, x=x+2.5, y=y+2, w=45, h=16)
-
-        pdf.set_font("Arial", '', 11)
-        pdf.cell(col_width_fecha, 20, f"{datetime.now().strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
+        pdf.cell(col_width_firma, cell_height, "", border=1)
         
-        pdf.set_font("Arial", 'B', 11)
-        pdf.cell(col_width_name, 8, f"C.C: {getattr(consentimiento.cita.psicologo, 'numero_identificacion', '')}", border=1)
-        pdf.cell(col_width_firma, 8, "", border=1)
-        pdf.cell(col_width_fecha, 8, "", border=1, ln=1)
+        # Guardar la firma del psicólogo como imagen temporal
+        # Remover el prefijo data:image/png;base64, si existe
+        if firma_psicologo.startswith('data:image'):
+            firma_psicologo = firma_psicologo.split(',')[1]
         
+        # Decodificar la imagen base64
+        firma_data = base64.b64decode(firma_psicologo)
+        firma_image = Image.open(io.BytesIO(firma_data))
+        
+        # Guardar temporalmente
+        temp_firma_path = f"static/firmas/temp_firma_psicologo_{consentimiento.cita.id}.png"
+        firma_image.save(temp_firma_path)
+        
+        # Insertar en el PDF
+        pdf.image(temp_firma_path, x=x+2.5, y=y+2, w=45, h=cell_height-4)
+        
+        # Limpiar archivo temporal
+        if os.path.exists(temp_firma_path):
+            os.remove(temp_firma_path)
+        
+        pdf.cell(col_width_fecha, cell_height, f"{datetime.now().strftime('%Y-%m-%d')}", border=1, ln=1, align='C')
+        pdf.cell(col_width_name, cell_height, f"C.C: {getattr(consentimiento.cita.psicologo, 'numero_identificacion', '')}", border=1, align='C')
+        pdf.cell(col_width_firma, cell_height, "", border=1)
+        pdf.cell(col_width_fecha, cell_height, "", border=1, ln=1)
         pdf_path = f"pdfs/consentimiento_final_{consentimiento.cita.id}.pdf"
         pdf.output(pdf_path)
-        
         return pdf_path
     except Exception as e:
         logger.error(f"Error al generar PDF final: {str(e)}")
@@ -425,6 +489,7 @@ def agendar_cita():
             # 1. Extraer y validar datos del formulario
             psicologo_id_str = request.form.get('psicologo_id')
             fecha_hora_str = request.form.get('fecha_hora')
+            modalidad = request.form.get('modalidad')
             nombre_completo = request.form.get('nombre_completo')
             tipo_identificacion = request.form.get('tipo_identificacion')
             numero_identificacion = request.form.get('numero_identificacion')
@@ -487,7 +552,8 @@ def agendar_cita():
                     fecha_nacimiento=fecha_nacimiento,
                     genero=genero,
                     direccion=direccion,
-                    ciudad=ciudad
+                    ciudad=ciudad,
+                    fecha_registro=datetime.utcnow()
                 )
                 db.session.add(paciente)
                 db.session.flush()
@@ -545,10 +611,11 @@ def agendar_cita():
                 paciente_id=paciente.id,
                 psicologo_id=psicologo_id,
                 fecha_hora=fecha_hora,
-                duracion_minutos=45,
+                modalidad=modalidad,
                 tipo_consulta='primera_vez',
                 estado='pendiente',
-                token_firma=token_firma
+                token_firma=token_firma,
+                fecha_creacion=datetime.utcnow()
             )
             db.session.add(nueva_cita)
             print(f"[DEBUG] Antes de commit: Cita ID: {getattr(nueva_cita, 'id', None)}, Token: {nueva_cita.token_firma}")
@@ -569,81 +636,79 @@ def agendar_cita():
 @app.route('/admin/citas')
 def admin_citas():
     if 'admin_logged_in' not in session:
-        return redirect(url_for('admin_login'))
+        return redirect(url_for('login'))
     
     citas_pendientes: List[Cita] = Cita.query.filter_by(estado='pendiente').order_by(Cita.fecha_hora.asc()).all()  # type: ignore
     return render_template('admin/citas.html', citas=citas_pendientes)
 
 @app.route('/admin/decision_cita/<int:cita_id>', methods=['POST'])
 def decision_cita(cita_id):
-    if 'admin_logged_in' not in session:
-        return redirect(url_for('admin_login'))
+    # Asegúrate de que solo los admins o psicólogos puedan acceder
+    if 'user_id' not in session or session.get('user_tipo') not in ['admin', 'psicologo']:
+        flash('Acceso no autorizado.', 'danger')
+        return redirect(url_for('login'))
     
     cita = Cita.query.get_or_404(cita_id)
-    decision = request.form['decision']
+    decision = request.form.get('decision')
     
     try:
         if decision == 'aceptar':
+            # 1. Generar contraseña segura
+            password = secrets.token_urlsafe(8)
+            password_hash = generate_password_hash(password)
+
+            # 2. Crear o actualizar la credencial del paciente en la nueva tabla
+            paciente_usuario = PacientesUsuarios.query.filter_by(paciente_id=cita.paciente_id).first()
+            
+            if not paciente_usuario:
+                paciente_usuario = PacientesUsuarios(
+                    paciente_id=cita.paciente_id,
+                    email=cita.paciente.email,
+                    password_hash=password_hash
+                )
+                db.session.add(paciente_usuario)
+            else:
+                # Si ya existe, actualizamos la contraseña por seguridad
+                paciente_usuario.password_hash = password_hash
+            
+            # 3. Actualizar estado de la cita
             cita.estado = 'aceptada'
-            if not enviar_correo_firma(cita):
-                flash('La cita fue aceptada pero hubo un error al enviar el correo', 'warning')
-        else:
-            cita.estado = 'rechazada'
-            if not enviar_correo_rechazo(cita):
-                flash('La cita fue rechazada pero hubo un error al enviar el correo', 'warning')
+            
+            db.session.commit()
+
+            # 4. Enviar correo con credenciales
+            if enviar_correo_confirmacion_y_credenciales(cita, password):
+                flash(f'La cita con {cita.paciente.nombre_completo} ha sido aceptada y se han enviado las credenciales por correo.', 'success')
+            else:
+                flash(f'La cita fue aceptada, pero no se pudo enviar el correo de confirmación.', 'danger')
         
-        db.session.commit()
-        flash(f'Cita {decision} correctamente', 'success')
+        else: # Si es 'rechazar'
+            cita.estado = 'rechazada'
+            db.session.commit()
+            if enviar_correo_rechazo(cita):
+                flash(f'La cita con {cita.paciente.nombre_completo} ha sido rechazada.', 'warning')
+            else:
+                flash('La cita fue rechazada, pero no se pudo enviar el correo de notificación.', 'danger')
     except Exception as e:
         db.session.rollback()
         logger.error(f"Error en decisión de cita: {str(e)}")
-        flash('Error al procesar la decisión', 'danger')
+        flash('Error al procesar la decisión de la cita.', 'danger')
     
+    # Redirigir según el rol del usuario
+    if session.get('user_tipo') == 'psicologo':
+        return redirect(url_for('panel_psicologo'))
     return redirect(url_for('admin_citas'))
 
 @app.route('/firmar/<token>', methods=['GET', 'POST'])
-def firmar_consentimiento(token):
-    cita = Cita.query.filter_by(token_firma=token).first_or_404()
-    
-    if request.method == 'POST':
-        if 'firma_paciente' not in request.form:
-            flash('Debes proporcionar una firma', 'danger')
-            return redirect(url_for('firmar_consentimiento', token=token))
-        
-        try:
-            firma_paciente = request.form['firma_paciente']
-            pdf_path = generar_pdf_paciente(cita, firma_paciente)
-            
-            with open(pdf_path, 'rb') as f:
-                pdf_data = f.read()
-            
-            nuevo_consentimiento = Consentimiento(
-                cita_id=cita.id,
-                firma_paciente=firma_paciente,
-                ip_paciente=request.remote_addr,
-                dispositivo_paciente=request.user_agent.string,
-                fecha_firma_paciente=datetime.now(),
-                pdf_final=pdf_data
-            )
-            
-            db.session.add(nuevo_consentimiento)
-            cita.estado = 'firmado_paciente'
-            db.session.commit()
-            
-            flash('Consentimiento firmado correctamente. El psicólogo lo revisará.', 'success')
-            return redirect(url_for('index'))
-        except Exception as e:
-            db.session.rollback()
-            logger.error(f"Error al firmar consentimiento: {str(e)}")
-            flash('Error al procesar tu firma. Por favor intenta nuevamente.', 'danger')
-            return redirect(url_for('firmar_consentimiento', token=token))
-    
-    return render_template('firma_paciente.html', cita=cita, fecha_actual=datetime.now())
+def firmar_consentimiento_token(token):
+    # La firma ahora requiere login, esta ruta puede ser deprecada o redirigir a login
+    flash('Para firmar el consentimiento, por favor, inicia sesión con las credenciales que te enviamos por correo.', 'info')
+    return redirect(url_for('login_paciente'))
 
 @app.route('/psicologo/firmar/<int:cita_id>', methods=['GET', 'POST'])
 def firma_psicologo(cita_id):
     if 'psicologo_id' not in session:
-        return redirect(url_for('login_psicologo'))
+        return redirect(url_for('login'))
     
     consentimiento = Consentimiento.query.filter_by(cita_id=cita_id).first_or_404()
     
@@ -686,8 +751,8 @@ def firma_psicologo(cita_id):
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    if 'admin_logged_in' not in session:
-        return redirect(url_for('admin_login'))
+    if 'user_id' not in session or session.get('user_tipo') != 'admin':
+        return redirect(url_for('login'))
 
     citas_pendientes: int = Cita.query.filter_by(estado='pendiente').count()
     citas_aceptadas: int = Cita.query.filter_by(estado='aceptada').count()
@@ -705,40 +770,60 @@ def admin_dashboard():
 @app.route('/admin/usuarios')
 def admin_usuarios():
     if 'admin_logged_in' not in session:
-        return redirect(url_for('admin_login'))
+        return redirect(url_for('login'))
     usuarios = []  # Aquí deberías cargar los usuarios desde la base de datos
     return render_template('admin/usuarios.html', usuarios=usuarios)
 
-@app.route('/admin/login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        usuario = request.form.get('usuario')
-        password = request.form.get('password')
-        if usuario == 'admin' and password == 'admin123':
-            session['admin_logged_in'] = True
-            flash('Inicio de sesión de administrador exitoso', 'success')
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if 'user_id' in session:
+        if session.get('user_tipo') == 'admin':
             return redirect(url_for('admin_dashboard'))
+        elif session.get('user_tipo') == 'psicologo':
+            return redirect(url_for('panel_psicologo'))
+
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        
+        usuario = Usuario.query.filter_by(email=email).first()
+
+        # Verificar contraseña (texto plano por ahora)
+        if usuario and usuario.password_hash == password:
+            session['user_id'] = usuario.id
+            session['user_tipo'] = usuario.tipo
+            
+            if usuario.tipo == 'admin':
+                session['admin_logged_in'] = True
+                return redirect(url_for('admin_dashboard'))
+            elif usuario.tipo == 'psicologo':
+                psicologo = Psicologo.query.filter_by(usuario_id=usuario.id).first()
+                if psicologo:
+                    session['psicologo_id'] = psicologo.id
+                return redirect(url_for('panel_psicologo'))
+            else:
+                flash('Tipo de usuario no reconocido.', 'error')
+                return redirect(url_for('login'))
         else:
-            flash('Usuario o contraseña incorrectos', 'danger')
-    return render_template('admin/login.html')
+            flash('Credenciales incorrectas. Por favor, intente de nuevo.', 'error')
+            return redirect(url_for('login'))
+
+    return render_template('login.html')
 
 @app.route('/logout')
 def logout():
     is_admin = session.pop('admin_logged_in', None)
     is_psicologo = session.pop('psicologo_id', None)
+    session.pop('user_id', None)
+    session.pop('user_tipo', None)
     session.pop('user_email', None)
     flash('Sesión cerrada correctamente', 'success')
-    if is_admin:
-        return redirect(url_for('admin_login'))
-    elif is_psicologo:
-        return redirect(url_for('login_psicologo'))
-    else:
-        return redirect(url_for('admin_login'))
+    return redirect(url_for('login'))
 
 @app.route('/admin/cita/<int:cita_id>')
 def ver_cita(cita_id):
     if 'admin_logged_in' not in session:
-        return redirect(url_for('admin_login'))
+        return redirect(url_for('login'))
     cita = Cita.query.get_or_404(cita_id)
     return render_template('admin/ver_cita.html', cita=cita)
 
@@ -758,40 +843,125 @@ def test_mail():
 
 @app.route('/admin/reenviar_correo_cita/<int:cita_id>', methods=['POST'])
 def reenviar_correo_cita(cita_id):
-    if 'admin_logged_in' not in session:
-        return redirect(url_for('admin_login'))
+    # Esta función podría necesitar ajustes para reenviar credenciales
     cita = Cita.query.get_or_404(cita_id)
-    if enviar_correo_firma(cita):
-        flash('Correo de firma reenviado al paciente.', 'success')
+    if cita.estado == 'aceptada':
+        # Para reenviar, necesitaríamos la contraseña. Por ahora, solo reenvía el link antiguo.
+        # Una mejor solución sería generar una nueva contraseña o un link de reseteo.
+        if enviar_correo_firma(cita): # Usando la función antigua como fallback
+            flash('Se ha reenviado el correo al paciente.', 'success')
+        else:
+            flash('No se pudo reenviar el correo.', 'danger')
     else:
-        flash('Error al reenviar el correo de firma', 'danger')
-    return redirect(url_for('admin_citas'))
+        flash('Solo se pueden reenviar correos de citas aceptadas.', 'warning')
+    return redirect(url_for('ver_cita', cita_id=cita_id))
 
-@app.route('/psicologo/login', methods=['GET', 'POST'])
-def login_psicologo():
+@app.route('/paciente/login', methods=['GET', 'POST'])
+def login_paciente():
+    if 'paciente_id' in session:
+        return redirect(url_for('panel_paciente'))
+
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
-        
-        usuario = Usuario.query.filter_by(email=email, tipo='psicologo', activo=True).first()
-        
-        if usuario and usuario.password_hash == password:  # En producción usar hash
-            psicologo = usuario.psicologo
-            if psicologo:
-                session['psicologo_id'] = psicologo.id
-                flash('Inicio de sesión exitoso', 'success')
-                return redirect(url_for('panel_psicologo'))
-            else:
-                flash('Error: Usuario no asociado a un psicólogo', 'danger')
+
+        if not email or not password:
+            flash('Email y contraseña son requeridos.', 'danger')
+            return redirect(url_for('login_paciente'))
+
+        paciente_usuario = PacientesUsuarios.query.filter_by(email=email).first()
+
+        if paciente_usuario and check_password_hash(paciente_usuario.password_hash, password):
+            session['paciente_id'] = paciente_usuario.paciente_id
+            session['paciente_email'] = paciente_usuario.email
+            
+            paciente_usuario.ultimo_login = datetime.utcnow()
+            db.session.commit()
+            
+            flash('Inicio de sesión exitoso.', 'success')
+            return redirect(url_for('panel_paciente'))
         else:
-            flash('Credenciales incorrectas', 'danger')
+            flash('Credenciales incorrectas. Por favor, intente de nuevo.', 'danger')
+
+    return render_template('login_paciente.html')
+
+@app.route('/paciente/logout')
+def logout_paciente():
+    session.pop('paciente_id', None)
+    session.pop('paciente_email', None)
+    flash('Has cerrado sesión.', 'info')
+    return redirect(url_for('login_paciente'))
+
+@app.route('/paciente/panel')
+def panel_paciente():
+    if 'paciente_id' not in session:
+        return redirect(url_for('login_paciente'))
     
-    return render_template('psicologo/login.html')
+    paciente_id = session['paciente_id']
+    citas = Cita.query.filter_by(paciente_id=paciente_id)\
+                      .order_by(Cita.fecha_hora.desc()).all()
+    
+    return render_template('paciente/panel.html', citas=citas)
+
+@app.route('/paciente/firmar/<int:cita_id>', methods=['GET', 'POST'])
+def firmar_consentimiento(cita_id):
+    if 'paciente_id' not in session:
+        return redirect(url_for('login_paciente'))
+
+    cita = Cita.query.filter_by(id=cita_id, paciente_id=session['paciente_id']).first_or_404()
+
+    # Verificar si la cita ya tiene un consentimiento firmado por el paciente
+    consentimiento_existente = Consentimiento.query.filter_by(cita_id=cita.id).first()
+    if consentimiento_existente:
+        flash('Ya has firmado el consentimiento para esta cita.', 'info')
+        return redirect(url_for('panel_paciente'))
+
+    if cita.estado != 'aceptada':
+        flash('Esta cita no puede ser firmada en este momento.', 'warning')
+        return redirect(url_for('panel_paciente'))
+
+    if request.method == 'POST':
+        firma_paciente_b64 = request.form.get('firma_paciente')
+        if not firma_paciente_b64:
+            flash('La firma es obligatoria.', 'danger')
+            return render_template('firma_paciente.html', cita=cita, fecha_actual=datetime.now())
+
+        try:
+            # Crear la carpeta de firmas si no existe
+            firmas_folder = os.path.join(app.static_folder, 'firmas')
+            os.makedirs(firmas_folder, exist_ok=True)
+            
+            # Guardar la firma como archivo
+            firma_path = os.path.join(firmas_folder, f"firma_{cita.id}.png")
+            firma_data = re.sub('^data:image/.+;base64,', '', firma_paciente_b64)
+            with open(firma_path, "wb") as f:
+                f.write(base64.b64decode(firma_data))
+
+            # Crear el registro de consentimiento
+            consentimiento = Consentimiento(
+                cita_id=cita.id,
+                firma_paciente=firma_paciente_b64, # Guardamos el base64 por si se necesita
+                ip_paciente=request.remote_addr,
+                dispositivo_paciente=request.user_agent.string,
+                fecha_firma_paciente=datetime.utcnow()
+            )
+            db.session.add(consentimiento)
+            db.session.commit()
+            
+            flash('Consentimiento firmado exitosamente. El psicólogo será notificado.', 'success')
+            return redirect(url_for('panel_paciente'))
+
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error al firmar consentimiento: {e}")
+            flash('Ocurrió un error al guardar tu firma.', 'danger')
+    
+    return render_template('firma_paciente.html', cita=cita, fecha_actual=datetime.now())
 
 @app.route('/psicologo/panel')
 def panel_psicologo():
-    if 'psicologo_id' not in session:
-        return redirect(url_for('login_psicologo'))
+    if 'user_id' not in session or session.get('user_tipo') != 'psicologo':
+        return redirect(url_for('login'))
     
     psicologo_id: int = session['psicologo_id']
     psicologo: Psicologo = Psicologo.query.get_or_404(psicologo_id)
@@ -838,7 +1008,7 @@ def panel_psicologo():
 @app.route('/psicologo/ver_consentimiento/<int:cita_id>')
 def ver_consentimiento(cita_id):
     if 'psicologo_id' not in session:
-        return redirect(url_for('login_psicologo'))
+        return redirect(url_for('login'))
     
     psicologo_id = session['psicologo_id']
     cita = Cita.query.filter_by(id=cita_id, psicologo_id=psicologo_id).first_or_404()
@@ -855,7 +1025,7 @@ def ver_consentimiento(cita_id):
 @app.route('/psicologo/descargar_consentimiento/<int:cita_id>')
 def descargar_consentimiento(cita_id):
     if 'psicologo_id' not in session:
-        return redirect(url_for('login_psicologo'))
+        return redirect(url_for('login'))
     
     psicologo_id = session['psicologo_id']
     cita = Cita.query.filter_by(id=cita_id, psicologo_id=psicologo_id).first_or_404()

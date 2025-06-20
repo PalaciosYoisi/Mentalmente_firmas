@@ -4,12 +4,26 @@ from datetime import datetime, date
 
 db = SQLAlchemy()
 
+class PacientesUsuarios(db.Model):
+    __tablename__ = 'pacientes_usuarios'
+    id = db.Column(db.Integer, primary_key=True)
+    paciente_id = db.Column(db.Integer, db.ForeignKey('pacientes.id'), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    ultimo_login = db.Column(db.DateTime)
+
+    def __init__(self, paciente_id: int, email: str, password_hash: str):
+        self.paciente_id = paciente_id
+        self.email = email
+        self.password_hash = password_hash
+
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), nullable=False, unique=True)
     password_hash = db.Column(db.String(255), nullable=False)
-    tipo = db.Column(db.Enum('admin', 'psicologo', 'asistente'), nullable=False)
+    tipo = db.Column(db.Enum('admin', 'psicologo', 'asistente', 'paciente'), nullable=False)
     activo = db.Column(db.Boolean, default=True)
     fecha_creacion = db.Column(db.DateTime)
     fecha_actualizacion = db.Column(db.DateTime)
@@ -37,6 +51,7 @@ class Paciente(db.Model):
     ciudad = db.Column(db.Enum('Apartadó', 'Medellín', 'Quibdó'), nullable=False)
     fecha_registro = db.Column(db.DateTime)
     citas = db.relationship('Cita', backref='paciente', lazy=True)
+    credencial = db.relationship('PacientesUsuarios', backref='paciente', uselist=False)
 
     def __init__(self, nombre_completo: str, tipo_identificacion: str, numero_identificacion: str, telefono: str, email: str, fecha_registro: Optional[datetime] = None, fecha_nacimiento: Optional[date] = None, genero: Optional[str] = None, direccion: Optional[str] = None, ciudad: str = 'Apartadó'):
         self.nombre_completo = nombre_completo
@@ -80,16 +95,18 @@ class Cita(db.Model):
     fecha_hora = db.Column(db.DateTime, nullable=False)
     duracion_minutos = db.Column(db.Integer, default=50)
     tipo_consulta = db.Column(db.Enum('primera_vez','control','emergencia'), nullable=False)
+    modalidad = db.Column(db.Enum('virtual', 'presencial'), nullable=False, default='presencial')
     estado = db.Column(db.Enum('pendiente','aceptada','rechazada','completada','cancelada'), default='pendiente')
     token_firma = db.Column(db.String(64), unique=True)
     notas = db.Column(db.Text)
     fecha_creacion = db.Column(db.DateTime)
     consentimiento = db.relationship('Consentimiento', uselist=False, backref='cita')
 
-    def __init__(self, paciente_id: int, psicologo_id: int, fecha_hora: datetime, duracion_minutos: int = 50, tipo_consulta: str = 'primera_vez', estado: str = 'pendiente', token_firma: Optional[str] = None, notas: Optional[str] = None, fecha_creacion: Optional[datetime] = None):
+    def __init__(self, paciente_id: int, psicologo_id: int, fecha_hora: datetime, modalidad: str, duracion_minutos: int = 50, tipo_consulta: str = 'primera_vez', estado: str = 'pendiente', token_firma: Optional[str] = None, notas: Optional[str] = None, fecha_creacion: Optional[datetime] = None):
         self.paciente_id = paciente_id
         self.psicologo_id = psicologo_id
         self.fecha_hora = fecha_hora
+        self.modalidad = modalidad
         self.duracion_minutos = duracion_minutos
         self.tipo_consulta = tipo_consulta
         self.estado = estado

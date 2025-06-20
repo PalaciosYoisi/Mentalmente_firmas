@@ -3,40 +3,41 @@
 {% block title %}Administrar Usuarios{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2 class="my-4">Administrar Usuarios</h2>
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">Lista de Usuarios</h5>
+<div class="container mx-auto px-4 sm:px-8">
+    <h2 class="my-4 text-2xl font-bold font-poppins text-primary flex items-center"><i class="fas fa-users mr-2 text-blue-500"></i>Administrar Usuarios</h2>
+    <div class="card mb-4 shadow-lg rounded-xl overflow-hidden">
+        <div class="card-header bg-primary text-white p-4 flex items-center rounded-t-xl">
+            <h5 class="mb-0 text-lg font-bold font-poppins flex items-center"><i class="fas fa-list mr-2"></i>Lista de Usuarios</h5>
         </div>
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
+        <div class="card-body p-4">
+            <div class="table-responsive overflow-x-auto">
+                <table class="table table-hover w-full min-w-[600px]">
+                    <thead class="bg-gray-50">
                         <tr>
-                            <th>ID</th>
-                            <th>Nombre</th>
-                            <th>Email</th>
-                            <th>Rol</th>
-                            <th>Acciones</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">ID</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Nombre</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Email</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Rol</th>
+                            <th class="px-4 py-2 text-left font-semibold font-poppins">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for usuario in usuarios %}
-                        <tr>
-                            <td>{{ usuario.id }}</td>
-                            <td>{{ usuario.nombre_completo or usuario.nombre }}</td>
-                            <td>{{ usuario.email }}</td>
-                            <td>{{ usuario.rol or 'N/A' }}</td>
-                            <td>
-                                <!-- Botones de acción (editar, eliminar, etc.) -->
-                                <a href="#" class="btn btn-sm btn-outline-info" title="Editar"><i class="fas fa-edit"></i></a>
-                                <a href="#" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fas fa-trash"></i></a>
+                        <tr class="hover:bg-blue-50 transition-colors">
+                            <td class="px-4 py-2">{{ usuario.id }}</td>
+                            <td class="px-4 py-2 font-poppins">{{ usuario.nombre_completo or usuario.nombre }}</td>
+                            <td class="px-4 py-2 font-poppins">{{ usuario.email }}</td>
+                            <td class="px-4 py-2 font-poppins">{{ usuario.rol or 'N/A' }}</td>
+                            <td class="px-4 py-2">
+                                <div class="flex flex-row flex-wrap gap-2">
+                                    <a href="#" class="btn btn-sm btn-outline-info" title="Editar"><i class="fas fa-edit"></i></a>
+                                    <a href="#" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fas fa-trash"></i></a>
+                                </div>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center">No hay usuarios registrados</td>
+                            <td colspan="5" class="text-center font-poppins">No hay usuarios registrados</td>
                         </tr>
                         {% endfor %}
                     </tbody>
