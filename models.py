@@ -78,6 +78,7 @@ class Psicologo(db.Model):
     firma_digital = db.Column(db.Text)
     telefono = db.Column(db.String(20))
     citas = db.relationship('Cita', backref='psicologo', lazy=True)
+    horarios = db.relationship('HorarioPsicologo', backref='psicologo', lazy=True)
 
     def __init__(self, usuario_id: int, nombre_completo: str, numero_identificacion: str, especialidad: Optional[str] = None, firma_digital: Optional[str] = None, telefono: Optional[str] = None):
         self.usuario_id = usuario_id
@@ -86,6 +87,27 @@ class Psicologo(db.Model):
         self.especialidad = especialidad
         self.firma_digital = firma_digital
         self.telefono = telefono
+
+class HorarioPsicologo(db.Model):
+    __tablename__ = 'horarios_psicologos'
+    id = db.Column(db.Integer, primary_key=True)
+    psicologo_id = db.Column(db.Integer, db.ForeignKey('psicologos.id'), nullable=False)
+    fecha = db.Column(db.Date, nullable=False)  # Fecha específica
+    hora_inicio = db.Column(db.Time, nullable=False)
+    hora_fin = db.Column(db.Time, nullable=False)
+    activo = db.Column(db.Boolean, default=True)
+    fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    fecha_actualizacion = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __init__(self, psicologo_id: int, fecha: date, hora_inicio: str, hora_fin: str, activo: bool = True):
+        self.psicologo_id = psicologo_id
+        self.fecha = fecha
+        self.hora_inicio = hora_inicio
+        self.hora_fin = hora_fin
+        self.activo = activo
+
+    def __repr__(self):
+        return f'<HorarioPsicologo {self.fecha} {self.hora_inicio}-{self.hora_fin}>'
 
 class Cita(db.Model):
     __tablename__ = 'citas'

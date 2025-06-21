@@ -1,0 +1,274 @@
+{% extends "base_panel.html" %}
+
+{% block title %}Gestionar Horarios{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header con navegación -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white rounded-xl shadow-md p-6">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-800 flex items-center">
+                <i class="fas fa-clock mr-3"></i>Gestionar Horarios
+            </h1>
+            <p class="text-gray-600 mt-2">Configura tus horarios de disponibilidad para fechas específicas.</p>
+        </div>
+        <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
+            <a href="{{ url_for('panel_psicologo') }}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Volver al Panel">
+                <i class="fas fa-arrow-left mr-2"></i>Volver al Panel
+            </a>
+            <a href="{{ url_for('index') }}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Ir al Sitio Web">
+                <i class="fas fa-home mr-2"></i>Ir al Sitio
+            </a>
+            <a href="{{ url_for('logout') }}" 
+               class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Cerrar Sesión">
+                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+            </a>
+        </div>
+    </div>
+
+    <!-- Información del Psicólogo -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="bg-purple-600 text-white px-6 py-4 flex items-center">
+            <i class="fas fa-user-md text-xl mr-3"></i>
+            <h2 class="text-xl font-bold">{{ psicologo.nombre_completo }}</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="flex items-center">
+                    <i class="fas fa-id-card text-purple-500 mr-3"></i>
+                    <span class="font-medium">{{ psicologo.numero_identificacion }}</span>
+                </div>
+                {% if psicologo.especialidad %}
+                <div class="flex items-center">
+                    <i class="fas fa-graduation-cap text-purple-500 mr-3"></i>
+                    <span class="font-medium">{{ psicologo.especialidad }}</span>
+                </div>
+                {% endif %}
+                {% if psicologo.telefono %}
+                <div class="flex items-center">
+                    <i class="fas fa-phone text-purple-500 mr-3"></i>
+                    <span class="font-medium">{{ psicologo.telefono }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Horarios Actuales -->
+    {% if horarios %}
+    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="bg-green-600 text-white px-6 py-4 flex items-center">
+            <i class="fas fa-calendar-check text-xl mr-3"></i>
+            <h2 class="text-xl font-bold">Horarios Configurados</h2>
+        </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for horario in horarios %}
+                <div class="border border-green-200 rounded-lg p-4 bg-green-50 relative">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-semibold text-green-800">
+                            {{ horario.fecha.strftime('%d/%m/%Y') }}
+                        </span>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-green-600">
+                                {{ horario.fecha.strftime('%A') }}
+                            </span>
+                            <form method="POST" action="{{ url_for('eliminar_horario', horario_id=horario.id) }}" 
+                                  class="inline" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este horario?')">
+                                <button type="submit" 
+                                        class="text-red-600 hover:text-red-800 transition-colors p-1"
+                                        title="Eliminar horario">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <div class="text-green-700">
+                        <i class="fas fa-clock mr-2"></i>
+                        {{ horario.hora_inicio.strftime('%H:%M') }} - {{ horario.hora_fin.strftime('%H:%M') }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Formulario de Horarios -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="bg-blue-600 text-white px-6 py-4 flex items-center">
+            <i class="fas fa-calendar-alt text-xl mr-3"></i>
+            <h2 class="text-xl font-bold">Configurar Nuevos Horarios</h2>
+        </div>
+        <div class="p-6">
+            <form method="POST" id="horariosForm">
+                <div class="mb-6">
+                    <p class="text-gray-600 mb-4">
+                        <i class="fas fa-info-circle text-blue-500 mr-2"></i>
+                        Agrega fechas específicas y horarios en los que estarás disponible para atender pacientes. 
+                        Cada cita tiene una duración de 50 minutos.
+                    </p>
+                </div>
+
+                <div id="horariosContainer" class="space-y-6">
+                    <!-- Los horarios se agregarán dinámicamente aquí -->
+                </div>
+
+                <div class="mt-6">
+                    <button type="button" 
+                            onclick="agregarHorario()"
+                            class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
+                        <i class="fas fa-plus mr-2"></i>Agregar Horario
+                    </button>
+                </div>
+
+                <div class="mt-8 flex justify-end space-x-4">
+                    <a href="{{ url_for('panel_psicologo') }}" 
+                       class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                        Cancelar
+                    </a>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-save mr-2"></i>Guardar Horarios
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Información Adicional -->
+    <div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+        <div class="flex items-start">
+            <i class="fas fa-lightbulb text-yellow-500 mr-3 mt-1"></i>
+            <div>
+                <h3 class="text-lg font-semibold text-yellow-800 mb-2">Consejos para configurar tus horarios:</h3>
+                <ul class="text-yellow-700 space-y-1">
+                    <li>• Configura horarios realistas que puedas cumplir</li>
+                    <li>• Considera tiempo para descansos entre citas</li>
+                    <li>• Los pacientes podrán agendar citas de 50 minutos en los horarios disponibles</li>
+                    <li>• Puedes configurar horarios para fechas específicas futuras</li>
+                    <li>• Los horarios se aplican solo a las fechas que configures</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let horarioIndex = 0;
+
+function agregarHorario() {
+    const container = document.getElementById('horariosContainer');
+    const horarioDiv = document.createElement('div');
+    horarioDiv.className = 'border border-gray-200 rounded-lg p-4 bg-gray-50';
+    horarioDiv.id = `horario-${horarioIndex}`;
+    
+    // Obtener fecha mínima (hoy)
+    const today = new Date().toISOString().split('T')[0];
+    
+    horarioDiv.innerHTML = `
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-semibold text-gray-700">Horario ${horarioIndex + 1}</h3>
+            <button type="button" 
+                    onclick="eliminarHorario(${horarioIndex})"
+                    class="text-red-600 hover:text-red-800 transition-colors">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Fecha
+                </label>
+                <input type="date" 
+                       name="fecha" 
+                       min="${today}"
+                       required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Hora de Inicio
+                </label>
+                <input type="time" 
+                       name="hora_inicio" 
+                       required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Hora de Fin
+                </label>
+                <input type="time" 
+                       name="hora_fin" 
+                       required
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(horarioDiv);
+    horarioIndex++;
+}
+
+function eliminarHorario(index) {
+    const horarioDiv = document.getElementById(`horario-${index}`);
+    if (horarioDiv) {
+        horarioDiv.remove();
+    }
+}
+
+// Validación del formulario
+document.getElementById('horariosForm').addEventListener('submit', function(e) {
+    const horarios = document.querySelectorAll('#horariosContainer > div');
+    
+    if (horarios.length === 0) {
+        e.preventDefault();
+        alert('Debes agregar al menos un horario.');
+        return;
+    }
+    
+    // Validar que los horarios estén completos
+    for (let horario of horarios) {
+        const fecha = horario.querySelector('input[name="fecha"]').value;
+        const horaInicio = horario.querySelector('input[name="hora_inicio"]').value;
+        const horaFin = horario.querySelector('input[name="hora_fin"]').value;
+        
+        if (!fecha || !horaInicio || !horaFin) {
+            e.preventDefault();
+            alert('Debes completar todos los campos para cada horario.');
+            return;
+        }
+        
+        if (horaInicio >= horaFin) {
+            e.preventDefault();
+            alert('La hora de fin debe ser posterior a la hora de inicio.');
+            return;
+        }
+        
+        // Validar que la fecha sea futura
+        const fechaSeleccionada = new Date(fecha);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        
+        if (fechaSeleccionada < hoy) {
+            e.preventDefault();
+            alert('Solo puedes configurar horarios para fechas futuras.');
+            return;
+        }
+    }
+});
+
+// Agregar un horario inicial si no hay ninguno
+document.addEventListener('DOMContentLoaded', function() {
+    if (document.querySelectorAll('#horariosContainer > div').length === 0) {
+        agregarHorario();
+    }
+});
+</script>
+{% endblock %} 

@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 from flask_mail import Mail, Message
 from fpdf import FPDF
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import base64
 import re
 import os
@@ -9,10 +9,11 @@ import io
 import secrets
 import logging
 from dotenv import load_dotenv
-from models import db, Paciente, Psicologo, Cita, Consentimiento, Usuario, Tutor, PacientesUsuarios
+from models import db, Paciente, Psicologo, Cita, Consentimiento, Usuario, Tutor, PacientesUsuarios, HorarioPsicologo
 from typing import List, Tuple, Any, Sequence
 from werkzeug.security import generate_password_hash, check_password_hash
 from PIL import Image
+from sqlalchemy import text
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -771,8 +772,16 @@ def admin_dashboard():
 def admin_usuarios():
     if 'admin_logged_in' not in session:
         return redirect(url_for('login'))
-    usuarios = []  # Aquí deberías cargar los usuarios desde la base de datos
-    return render_template('admin/usuarios.html', usuarios=usuarios)
+    
+    # Cargar todos los usuarios del sistema
+    usuarios = Usuario.query.all()
+    psicologos = Psicologo.query.all()
+    pacientes_usuarios = PacientesUsuarios.query.all()
+    
+    return render_template('admin/usuarios.html', 
+                         usuarios=usuarios, 
+                         psicologos=psicologos, 
+                         pacientes_usuarios=pacientes_usuarios)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -807,7 +816,7 @@ def login():
         else:
             flash('Credenciales incorrectas. Por favor, intente de nuevo.', 'error')
             return redirect(url_for('login'))
-
+            
     return render_template('login.html')
 
 @app.route('/logout')
@@ -1044,6 +1053,111 @@ def descargar_consentimiento(cita_id):
         flash('El archivo PDF no está disponible', 'danger')
         return redirect(url_for('panel_psicologo'))
 
+@app.route('/psicologo/horarios', methods=['GET', 'POST'])
+def psicologo_horarios():
+    if 'user_id' not in session or session.get('user_tipo') != 'psicologo':
+        return redirect(url_for('login'))
+    
+    psicologo_id = session.get('psicologo_id')
+    if not psicologo_id:
+        flash('Error: No se encontró información del psicólogo.', 'error')
+        return redirect(url_for('login'))
+    
+    psicologo = Psicologo.query.get(psicologo_id)
+    if not psicologo:
+        flash('Error: Psicólogo no encontrado.', 'error')
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        try:
+            # Obtener datos del formulario
+            fechas = request.form.getlist('fecha')
+            horas_inicio = request.form.getlist('hora_inicio')
+            horas_fin = request.form.getlist('hora_fin')
+            
+            # Crear nuevos horarios (sin eliminar los existentes)
+            horarios_creados = 0
+            for i, fecha_str in enumerate(fechas):
+                if fecha_str and horas_inicio[i] and horas_fin[i]:
+                    fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+                    
+                    # Verificar si ya existe un horario para esta fecha
+                    horario_existente = HorarioPsicologo.query.filter_by(
+                        psicologo_id=psicologo_id,
+                        fecha=fecha
+                    ).first()
+                    
+                    if horario_existente:
+                        # Actualizar horario existente
+                        horario_existente.hora_inicio = horas_inicio[i]
+                        horario_existente.hora_fin = horas_fin[i]
+                        horario_existente.activo = True
+                        horario_existente.fecha_actualizacion = datetime.utcnow()
+                    else:
+                        # Crear nuevo horario
+                        horario = HorarioPsicologo(
+                            psicologo_id=psicologo_id,
+                            fecha=fecha,
+                            hora_inicio=horas_inicio[i],
+                            hora_fin=horas_fin[i],
+                            activo=True
+                        )
+                        db.session.add(horario)
+                        horarios_creados += 1
+            
+            db.session.commit()
+            if horarios_creados > 0:
+                flash(f'{horarios_creados} horarios agregados correctamente.', 'success')
+            else:
+                flash('Horarios actualizados correctamente.', 'success')
+            return redirect(url_for('psicologo_horarios'))
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error al actualizar horarios: {str(e)}")
+            flash('Error al actualizar los horarios. Por favor, intente nuevamente.', 'danger')
+    
+    # Obtener horarios actuales
+    horarios = HorarioPsicologo.query.filter_by(psicologo_id=psicologo_id, activo=True).order_by(HorarioPsicologo.fecha).all()
+    
+    return render_template('psicologo/horarios.html', 
+                         psicologo=psicologo,
+                         horarios=horarios)
+
+@app.route('/psicologo/eliminar_horario/<int:horario_id>', methods=['POST'])
+def eliminar_horario(horario_id):
+    if 'user_id' not in session or session.get('user_tipo') != 'psicologo':
+        return redirect(url_for('login'))
+    
+    psicologo_id = session.get('psicologo_id')
+    if not psicologo_id:
+        flash('Error: No se encontró información del psicólogo.', 'error')
+        return redirect(url_for('psicologo_horarios'))
+    
+    try:
+        # Buscar el horario y verificar que pertenece al psicólogo
+        horario = HorarioPsicologo.query.filter_by(
+            id=horario_id,
+            psicologo_id=psicologo_id
+        ).first()
+        
+        if not horario:
+            flash('Horario no encontrado.', 'danger')
+            return redirect(url_for('psicologo_horarios'))
+        
+        # Eliminar el horario
+        db.session.delete(horario)
+        db.session.commit()
+        
+        flash('Horario eliminado correctamente.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error al eliminar horario: {str(e)}")
+        flash('Error al eliminar el horario. Por favor, intente nuevamente.', 'danger')
+    
+    return redirect(url_for('psicologo_horarios'))
+
 # --- Endpoint para obtener horarios disponibles ---
 @app.route('/get-available-times')
 def get_available_times():
@@ -1059,12 +1173,17 @@ def get_available_times():
     except (ValueError, TypeError):
         return jsonify({'error': 'Formato de fecha o ID inválido'}), 400
 
-    # Horario laboral estándar (de 8 AM a 5 PM)
-    work_start_hour = 8
-    work_end_hour = 17
-    all_slots = [f"{hour:02d}:00" for hour in range(work_start_hour, work_end_hour)]
-
-    # Obtener citas ya agendadas para ese día y psicólogo
+    # Obtener horarios configurados del psicólogo para esa fecha específica
+    horarios = HorarioPsicologo.query.filter_by(
+        psicologo_id=psychologist_id,
+        fecha=selected_date,
+        activo=True
+    ).all()
+    
+    if not horarios:
+        return jsonify([])  # No hay horarios configurados para esa fecha
+    
+    # Obtener citas ya agendadas para esa fecha y psicólogo
     booked_appointments = db.session.query(Cita).filter_by(
         psicologo_id=psychologist_id
     ).filter(
@@ -1073,16 +1192,174 @@ def get_available_times():
 
     booked_times = {cita.fecha_hora.strftime('%H:%M') for cita in booked_appointments}
 
-    # Filtrar para obtener solo los horarios disponibles
-    available_slots = [slot for slot in all_slots if slot not in booked_times]
+    # Generar slots disponibles basados en los horarios configurados
+    available_slots = []
+    
+    for horario in horarios:
+        hora_actual = horario.hora_inicio
+        while hora_actual < horario.hora_fin:
+            # Verificar si hay una cita en este horario
+            if hora_actual.strftime('%H:%M') not in booked_times:
+                available_slots.append(hora_actual.strftime('%H:%M'))
+            
+            # Avanzar 50 minutos (duración de la cita)
+            from datetime import timedelta
+            hora_actual = (datetime.combine(datetime.min, hora_actual) + timedelta(minutes=50)).time()
 
     return jsonify(available_slots)
+
+@app.route('/get-available-dates/<int:psychologist_id>')
+def get_available_dates(psychologist_id):
+    """Obtener fechas disponibles para un psicólogo específico"""
+    try:
+        # Obtener todas las fechas futuras con horarios configurados
+        from datetime import date
+        today = date.today()
+        
+        horarios = HorarioPsicologo.query.filter_by(
+            psicologo_id=psychologist_id,
+            activo=True
+        ).filter(
+            HorarioPsicologo.fecha >= today
+        ).order_by(HorarioPsicologo.fecha).all()
+        
+        # Obtener fechas únicas y verificar que tengan horarios disponibles
+        fechas_disponibles = []
+        for horario in horarios:
+            fecha_str = horario.fecha.strftime('%Y-%m-%d')
+            
+            # Verificar si ya agregamos esta fecha
+            if fecha_str not in [f['fecha'] for f in fechas_disponibles]:
+                # Verificar si hay citas agendadas para esta fecha
+                citas_agendadas = db.session.query(Cita).filter_by(
+                    psicologo_id=psychologist_id
+                ).filter(
+                    db.func.date(Cita.fecha_hora) == horario.fecha
+                ).count()
+                
+                # Calcular slots disponibles para esta fecha
+                slots_disponibles = 0
+                for h in horarios:
+                    if h.fecha == horario.fecha:
+                        # Calcular cuántos slots de 50 minutos caben en este horario
+                        inicio = datetime.combine(datetime.min, h.hora_inicio)
+                        fin = datetime.combine(datetime.min, h.hora_fin)
+                        duracion_total = (fin - inicio).total_seconds() / 60  # en minutos
+                        slots_disponibles += int(duracion_total / 50)
+                
+                # Solo incluir la fecha si hay slots disponibles después de las citas agendadas
+                if slots_disponibles > citas_agendadas:
+                    fechas_disponibles.append({
+                        'fecha': fecha_str,
+                        'dia_semana': horario.fecha.strftime('%A'),
+                        'dia_mes': horario.fecha.strftime('%d/%m/%Y')
+                    })
+        
+        return jsonify(fechas_disponibles)
+        
+    except Exception as e:
+        logger.error(f"Error al obtener fechas disponibles: {str(e)}")
+        return jsonify({'error': 'Error al obtener fechas disponibles'}), 500
+
+@app.route('/get-alternative-psychologists/<date_str>')
+def get_alternative_psychologists(date_str):
+    """Obtener psicólogos alternativos para una fecha específica"""
+    try:
+        selected_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        
+        # Obtener psicólogos que tienen horarios en esa fecha
+        psicologos_disponibles = db.session.query(Psicologo).join(
+            HorarioPsicologo, Psicologo.id == HorarioPsicologo.psicologo_id
+        ).filter(
+            HorarioPsicologo.fecha == selected_date,
+            HorarioPsicologo.activo == True
+        ).all()
+        
+        psicologos_data = []
+        for psicologo in psicologos_disponibles:
+            # Verificar si hay slots disponibles para este psicólogo en esta fecha
+            horarios_psicologo = HorarioPsicologo.query.filter_by(
+                psicologo_id=psicologo.id,
+                fecha=selected_date,
+                activo=True
+            ).all()
+            
+            # Calcular slots totales y ocupados
+            slots_totales = 0
+            for horario in horarios_psicologo:
+                inicio = datetime.combine(datetime.min, horario.hora_inicio)
+                fin = datetime.combine(datetime.min, horario.hora_fin)
+                duracion_total = (fin - inicio).total_seconds() / 60
+                slots_totales += int(duracion_total / 50)
+            
+            # Contar citas agendadas
+            citas_agendadas = db.session.query(Cita).filter_by(
+                psicologo_id=psicologo.id
+            ).filter(
+                db.func.date(Cita.fecha_hora) == selected_date
+            ).count()
+            
+            # Solo incluir si hay slots disponibles
+            if slots_totales > citas_agendadas:
+                psicologos_data.append({
+                    'id': psicologo.id,
+                    'nombre': psicologo.nombre_completo,
+                    'especialidad': psicologo.especialidad or 'No especificada',
+                    'slots_disponibles': slots_totales - citas_agendadas
+                })
+        
+        return jsonify(psicologos_data)
+        
+    except Exception as e:
+        logger.error(f"Error al obtener psicólogos alternativos: {str(e)}")
+        return jsonify({'error': 'Error al obtener psicólogos alternativos'}), 500
 
 @app.route('/get-psychologist-image/<int:psychologist_id>')
 def get_psychologist_image(psychologist_id):
     # Implementa la lógica para obtener la imagen del psicólogo aquí
     # Esto es solo un ejemplo y debería ser reemplazado por la implementación real
     return "Imagen del psicólogo"
+
+@app.route('/get-all-available-psychologists')
+def get_all_available_psychologists():
+    """Obtener todos los psicólogos que tienen fechas disponibles en el futuro"""
+    try:
+        from datetime import date
+        today = date.today()
+        
+        # Obtener psicólogos que tienen horarios futuros
+        psicologos_disponibles = db.session.query(Psicologo).join(
+            HorarioPsicologo, Psicologo.id == HorarioPsicologo.psicologo_id
+        ).filter(
+            HorarioPsicologo.fecha >= today,
+            HorarioPsicologo.activo == True
+        ).distinct().all()
+        
+        psicologos_data = []
+        for psicologo in psicologos_disponibles:
+            # Contar fechas disponibles para este psicólogo
+            fechas_disponibles = db.session.query(HorarioPsicologo.fecha).filter_by(
+                psicologo_id=psicologo.id,
+                activo=True
+            ).filter(
+                HorarioPsicologo.fecha >= today
+            ).distinct().count()
+            
+            psicologos_data.append({
+                'id': psicologo.id,
+                'nombre': psicologo.nombre_completo,
+                'especialidad': psicologo.especialidad or 'No especificada',
+                'fechas_disponibles': fechas_disponibles
+            })
+        
+        # Ordenar por número de fechas disponibles (descendente)
+        psicologos_data.sort(key=lambda x: x['fechas_disponibles'], reverse=True)
+        
+        return jsonify(psicologos_data)
+        
+    except Exception as e:
+        logger.error(f"Error al obtener todos los psicólogos disponibles: {str(e)}")
+        return jsonify({'error': 'Error al obtener psicólogos disponibles'}), 500
 
 # --- Inicialización ---
 with app.app_context():

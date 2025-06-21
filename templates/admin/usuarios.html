@@ -1,48 +1,229 @@
-{% extends 'base.html' %}
+{% extends "base_panel.html" %}
 
 {% block title %}Administrar Usuarios{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 sm:px-8">
-    <h2 class="my-4 text-2xl font-bold font-poppins text-primary flex items-center"><i class="fas fa-users mr-2 text-blue-500"></i>Administrar Usuarios</h2>
-    <div class="card mb-4 shadow-lg rounded-xl overflow-hidden">
-        <div class="card-header bg-primary text-white p-4 flex items-center rounded-t-xl">
-            <h5 class="mb-0 text-lg font-bold font-poppins flex items-center"><i class="fas fa-list mr-2"></i>Lista de Usuarios</h5>
+<div class="container mx-auto px-4 py-8">
+    <!-- Header con navegación -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white rounded-xl shadow-md p-6">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-blue-800 flex items-center">
+                <i class="fas fa-users mr-3"></i>Administrar Usuarios
+            </h1>
+            <p class="text-gray-600 mt-2">Gestiona todos los usuarios del sistema: administradores, psicólogos y pacientes.</p>
         </div>
-        <div class="card-body p-4">
-            <div class="table-responsive overflow-x-auto">
-                <table class="table table-hover w-full min-w-[600px]">
+        <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
+            <a href="{{ url_for('admin_dashboard') }}" 
+               class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Volver al Dashboard">
+                <i class="fas fa-arrow-left mr-2"></i>Volver al Dashboard
+            </a>
+            <a href="{{ url_for('index') }}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Ir al Sitio Web">
+                <i class="fas fa-home mr-2"></i>Ir al Sitio
+            </a>
+            <a href="{{ url_for('logout') }}" 
+               class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Cerrar Sesión">
+                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+            </a>
+        </div>
+    </div>
+
+    <!-- Tarjetas de Resumen -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <!-- Administradores -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border-t-4 border-red-500 transition-transform hover:scale-[1.02]">
+            <div class="p-6 text-center">
+                <div class="text-red-500 text-4xl mb-3">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Administradores</h3>
+                <p class="text-3xl font-bold text-red-600">{{ usuarios|selectattr('tipo', 'equalto', 'admin')|list|length }}</p>
+            </div>
+        </div>
+
+        <!-- Psicólogos -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border-t-4 border-blue-500 transition-transform hover:scale-[1.02]">
+            <div class="p-6 text-center">
+                <div class="text-blue-500 text-4xl mb-3">
+                    <i class="fas fa-user-md"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Psicólogos</h3>
+                <p class="text-3xl font-bold text-blue-600">{{ psicologos|length }}</p>
+            </div>
+        </div>
+
+        <!-- Pacientes -->
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border-t-4 border-green-500 transition-transform hover:scale-[1.02]">
+            <div class="p-6 text-center">
+                <div class="text-green-500 text-4xl mb-3">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-700 mb-2">Pacientes</h3>
+                <p class="text-3xl font-bold text-green-600">{{ pacientes_usuarios|length }}</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sección de Administradores -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="bg-red-600 text-white px-6 py-4 flex items-center">
+            <i class="fas fa-user-shield text-xl mr-3"></i>
+            <h2 class="text-xl font-bold">Administradores del Sistema</h2>
+        </div>
+        <div class="p-6">
+            {% set admins = usuarios|selectattr('tipo', 'equalto', 'admin')|list %}
+            {% if admins %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-4 py-2 text-left font-semibold font-poppins">ID</th>
-                            <th class="px-4 py-2 text-left font-semibold font-poppins">Nombre</th>
-                            <th class="px-4 py-2 text-left font-semibold font-poppins">Email</th>
-                            <th class="px-4 py-2 text-left font-semibold font-poppins">Rol</th>
-                            <th class="px-4 py-2 text-left font-semibold font-poppins">Acciones</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        {% for usuario in usuarios %}
-                        <tr class="hover:bg-blue-50 transition-colors">
-                            <td class="px-4 py-2">{{ usuario.id }}</td>
-                            <td class="px-4 py-2 font-poppins">{{ usuario.nombre_completo or usuario.nombre }}</td>
-                            <td class="px-4 py-2 font-poppins">{{ usuario.email }}</td>
-                            <td class="px-4 py-2 font-poppins">{{ usuario.rol or 'N/A' }}</td>
-                            <td class="px-4 py-2">
-                                <div class="flex flex-row flex-wrap gap-2">
-                                    <a href="#" class="btn btn-sm btn-outline-info" title="Editar"><i class="fas fa-edit"></i></a>
-                                    <a href="#" class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="fas fa-trash"></i></a>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for usuario in admins %}
+                        <tr class="hover:bg-red-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">{{ usuario.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="fas fa-envelope text-red-400 mr-2"></i>
+                                    <span class="font-medium">{{ usuario.email }}</span>
                                 </div>
                             </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center font-poppins">No hay usuarios registrados</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                    <i class="fas fa-user-shield mr-1"></i> Administrador
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Activo
+                                </span>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-user-shield text-4xl mb-3"></i>
+                <p>No hay administradores registrados.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sección de Psicólogos -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-8">
+        <div class="bg-blue-600 text-white px-6 py-4 flex items-center">
+            <i class="fas fa-user-md text-xl mr-3"></i>
+            <h2 class="text-xl font-bold">Psicólogos Registrados</h2>
+        </div>
+        <div class="p-6">
+            {% if psicologos %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre Completo</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Especialidad</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teléfono</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usuario ID</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for psicologo in psicologos %}
+                        <tr class="hover:bg-blue-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">{{ psicologo.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="fas fa-user-md text-blue-400 mr-2"></i>
+                                    <span class="font-medium">{{ psicologo.nombre_completo }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ psicologo.numero_identificacion }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ psicologo.especialidad or 'No especificada' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ psicologo.telefono or 'No especificado' }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ psicologo.usuario_id or 'No asignado' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+                        {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-user-md text-4xl mb-3"></i>
+                <p>No hay psicólogos registrados.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Sección de Pacientes -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="bg-green-600 text-white px-6 py-4 flex items-center">
+            <i class="fas fa-user-circle text-xl mr-3"></i>
+            <h2 class="text-xl font-bold">Pacientes con Acceso al Sistema</h2>
+        </div>
+        <div class="p-6">
+            {% if pacientes_usuarios %}
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Último Login</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for paciente_usuario in pacientes_usuarios %}
+                        <tr class="hover:bg-green-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap">{{ paciente_usuario.id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="fas fa-envelope text-green-400 mr-2"></i>
+                                    <span class="font-medium">{{ paciente_usuario.email }}</span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">{{ paciente_usuario.paciente_id }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if paciente_usuario.ultimo_login %}
+                                <div class="flex items-center">
+                                    <i class="fas fa-clock text-gray-400 mr-2"></i>
+                                    {{ paciente_usuario.ultimo_login.strftime('%d/%m/%Y %H:%M') }}
+                                </div>
+                                {% else %}
+                                <span class="text-gray-500 italic">Nunca</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                    <i class="fas fa-check-circle mr-1"></i> Activo
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-8 text-gray-500">
+                <i class="fas fa-user-circle text-4xl mb-3"></i>
+                <p>No hay pacientes con acceso al sistema.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

@@ -1,8 +1,8 @@
-{% extends "base.html" %}
+{% extends "base_panel.html" %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <!-- Header del Psicólogo -->
+    <!-- Header del Psicólogo con navegación -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white rounded-xl shadow-md p-6">
         <div class="flex items-center space-x-4 mb-4 md:mb-0">
             <img src="/static/img/psychologists/default.jpg" alt="Avatar" class="w-16 h-16 rounded-full border-4 border-blue-200 shadow">
@@ -22,9 +22,23 @@
                 </div>
             </div>
         </div>
-        <a href="{{ url_for('logout') }}" class="btn bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex items-center transition-colors">
-            <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
-        </a>
+        <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
+            <a href="{{ url_for('psicologo_horarios') }}" 
+               class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Gestionar Horarios">
+                <i class="fas fa-clock mr-2"></i>Gestionar Horarios
+            </a>
+            <a href="{{ url_for('index') }}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Ir al Sitio Web">
+                <i class="fas fa-home mr-2"></i>Ir al Sitio
+            </a>
+            <a href="{{ url_for('logout') }}" 
+               class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Cerrar Sesión">
+                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
+            </a>
+        </div>
     </div>
 
     <!-- Tarjetas de Resumen -->
@@ -209,7 +223,8 @@
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paciente</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documento</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha de Cita</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Firma Final</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Firma Paciente</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha Firma Psicólogo</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
@@ -233,14 +248,21 @@
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
                                 <div class="flex items-center">
-                                    <i class="fas fa-check-circle text-green-300 mr-2"></i>
-                                    {{ consentimiento.fecha_firma_psicologo.strftime('%d/%m/%Y %H:%M') }}
+                                    <i class="fas fa-pen-fancy text-blue-600 mr-2"></i>
+                                    {{ consentimiento.fecha_firma_paciente.strftime('%d/%m/%Y %H:%M') }}
                                 </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    <i class="fas fa-pen-nib text-green-600 mr-2"></i>
+                                    {{ consentimiento.fecha_firma_psicologo.strftime('%d/%m/%Y %H:%M') }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap space-x-2">
                                 <a href="{{ url_for('descargar_consentimiento', cita_id=cita.id) }}" 
-                                   class="inline-flex items-center px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-md transition-colors">
-                                    <i class="fas fa-download mr-1"></i> Descargar PDF
+                                   class="inline-flex items-center px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md transition-colors"
+                                   title="Descargar PDF final">
+                                    <i class="fas fa-download mr-1"></i> Descargar
                                 </a>
                             </td>
                         </tr>
@@ -250,7 +272,7 @@
             </div>
             {% else %}
             <div class="text-center py-8 text-gray-500">
-                <i class="fas fa-check-circle text-4xl mb-3"></i>
+                <i class="fas fa-file-check text-4xl mb-3"></i>
                 <p>No hay consentimientos completados.</p>
             </div>
             {% endif %}

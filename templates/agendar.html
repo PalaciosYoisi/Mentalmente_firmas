@@ -51,36 +51,183 @@
                 <!-- Step 2: Date and Time -->
                 <div x-show="step === 2">
                     <h3 class="text-2xl font-semibold mb-6">Selecciona fecha y hora</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="appointment-date" class="block font-semibold mb-2">Fecha</label>
-                            <input type="date" id="appointment-date" name="appointment_date" :min="minDate" x-model="appointmentDate" class="w-full p-2 border rounded-lg">
+                    
+                    <!-- Mensaje cuando no hay fechas disponibles -->
+                    <div x-show="!isLoadingDates && availableDates.length === 0" class="mb-6 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-exclamation-triangle text-yellow-600 mr-3 text-xl"></i>
+                            <h4 class="text-lg font-semibold text-yellow-800">No hay fechas disponibles</h4>
                         </div>
-                        <div>
-                            <label class="block font-semibold mb-2">Horarios disponibles</label>
-                            <div id="time-slots-container" class="grid grid-cols-3 gap-2">
-                                <template x-if="isLoadingTimes">
-                                    <p class="text-gray-500 col-span-3">Cargando horarios...</p>
-                                </template>
-                                <template x-if="!isLoadingTimes && availableTimes.length > 0">
-                                    <template x-for="time in availableTimes" :key="time">
-                                        <button type="button" x-text="time" 
-                                                @click="selectTime(time)"
-                                                :class="{ 'bg-blue-500 text-white': appointmentTime && appointmentTime.endsWith(time), 'hover:bg-blue-100': !(appointmentTime && appointmentTime.endsWith(time)) }"
-                                                class="p-2 border rounded-lg text-center cursor-pointer focus:outline-none transition-colors">
-                                        </button>
-                                    </template>
-                                </template>
-                                <template x-if="!isLoadingTimes && availableTimes.length === 0">
-                                    <p class="text-gray-500 col-span-3" x-text="timeSlotsMessage"></p>
-                                </template>
-                            </div>
-                            <input type="hidden" id="selected-time" name="fecha_hora" x-model="appointmentTime">
+                        <p class="text-yellow-700 mb-4">El psicólogo seleccionado no tiene fechas disponibles en este momento.</p>
+                        <div class="space-y-3">
+                            <button type="button" 
+                                    @click="showAllPsychologists()"
+                                    class="block w-full md:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-users mr-2"></i>Ver todos los psicólogos disponibles
+                            </button>
+                            <button type="button" 
+                                    @click="step = 1"
+                                    class="block w-full md:w-auto px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors">
+                                <i class="fas fa-arrow-left mr-2"></i>Seleccionar otro psicólogo
+                            </button>
                         </div>
                     </div>
+
+                    <!-- Calendario y horarios cuando hay fechas disponibles -->
+                    <div x-show="availableDates.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <!-- Calendario -->
+                        <div>
+                            <label class="block font-semibold mb-4">Selecciona una fecha disponible</label>
+                            <div class="bg-white border rounded-lg p-4">
+                                <!-- Navegación del calendario -->
+                                <div class="flex items-center justify-between mb-4">
+                                    <button @click="previousMonth()" type="button" class="p-2 hover:bg-gray-100 rounded-lg">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </button>
+                                    <h4 class="text-lg font-semibold" x-text="currentMonthYear"></h4>
+                                    <button @click="nextMonth()" type="button" class="p-2 hover:bg-gray-100 rounded-lg">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </button>
+                                </div>
+
+                                <!-- Días de la semana -->
+                                <div class="grid grid-cols-7 gap-1 mb-2">
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Dom</div>
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Lun</div>
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Mar</div>
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Mié</div>
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Jue</div>
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Vie</div>
+                                    <div class="text-center text-sm font-medium text-gray-500 p-2">Sáb</div>
+                                </div>
+
+                                <!-- Días del mes -->
+                                <div class="grid grid-cols-7 gap-1">
+                                    <template x-for="day in calendarDays" :key="day.date">
+                                        <button type="button"
+                                                @click="selectDate(day.date)"
+                                                :disabled="!day.available"
+                                                :class="{
+                                                    'bg-blue-500 text-white': day.selected,
+                                                    'bg-green-100 text-green-800 hover:bg-green-200': day.available && !day.selected,
+                                                    'text-gray-300 cursor-not-allowed': !day.available,
+                                                    'text-gray-600 hover:bg-gray-100': day.available && !day.selected
+                                                }"
+                                                class="p-2 rounded-lg text-sm font-medium transition-colors focus:outline-none"
+                                                x-text="day.dayNumber">
+                                        </button>
+                                    </template>
+                                </div>
+
+                                <!-- Leyenda -->
+                                <div class="mt-4 flex items-center justify-center space-x-4 text-xs">
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-green-100 border border-green-300 rounded mr-2"></div>
+                                        <span>Disponible</span>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-3 h-3 bg-blue-500 rounded mr-2"></div>
+                                        <span>Seleccionado</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Horarios disponibles -->
+                        <div>
+                            <label class="block font-semibold mb-4">Horarios disponibles</label>
+                            <div class="bg-white border rounded-lg p-4">
+                                <template x-if="isLoadingTimes">
+                                    <div class="text-center py-8">
+                                        <i class="fas fa-spinner fa-spin text-blue-500 text-2xl mb-2"></i>
+                                        <p class="text-gray-500">Cargando horarios...</p>
+                                    </div>
+                                </template>
+                                
+                                <template x-if="!isLoadingTimes && availableTimes.length > 0">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <template x-for="time in availableTimes" :key="time">
+                                            <button type="button" 
+                                                    x-text="time" 
+                                                    @click="selectTime(time)"
+                                                    :class="{ 
+                                                        'bg-blue-500 text-white border-blue-500': appointmentTime && appointmentTime.endsWith(time), 
+                                                        'bg-white text-gray-700 border-gray-300 hover:border-blue-400 hover:bg-blue-50': !(appointmentTime && appointmentTime.endsWith(time))
+                                                    }"
+                                                    class="p-3 border rounded-lg text-center cursor-pointer focus:outline-none transition-all font-medium">
+                                            </button>
+                                        </template>
+                                    </div>
+                                </template>
+                                
+                                <template x-if="!isLoadingTimes && availableTimes.length === 0 && appointmentDate">
+                                    <div class="text-center py-8">
+                                        <i class="fas fa-clock text-gray-400 text-2xl mb-2"></i>
+                                        <p class="text-gray-500" x-text="timeSlotsMessage"></p>
+                                    </div>
+                                </template>
+                                
+                                <template x-if="!appointmentDate">
+                                    <div class="text-center py-8">
+                                        <i class="fas fa-calendar text-gray-400 text-2xl mb-2"></i>
+                                        <p class="text-gray-500">Selecciona una fecha para ver los horarios disponibles</p>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Psicólogos alternativos -->
+                    <div x-show="showAlternatives" class="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 class="font-semibold text-blue-800 mb-4 flex items-center">
+                            <i class="fas fa-lightbulb mr-2"></i>
+                            <span x-text="appointmentDate ? 'Psicólogos disponibles para esta fecha:' : 'Todos los psicólogos disponibles:'"></span>
+                        </h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <template x-for="psych in alternativePsychologists" :key="psych.id">
+                                <div class="p-4 bg-white border border-blue-200 rounded-lg hover:shadow-md transition-shadow">
+                                    <h5 class="font-semibold text-blue-900 mb-2" x-text="psych.nombre"></h5>
+                                    <p class="text-sm text-blue-700 mb-3" x-text="psych.especialidad"></p>
+                                    <template x-if="appointmentDate">
+                                        <p class="text-xs text-green-600 mb-3 flex items-center">
+                                            <i class="fas fa-clock mr-1"></i>
+                                            <span x-text="`${psych.slots_disponibles} horarios disponibles`"></span>
+                                        </p>
+                                    </template>
+                                    <template x-if="!appointmentDate">
+                                        <p class="text-xs text-green-600 mb-3 flex items-center">
+                                            <i class="fas fa-calendar mr-1"></i>
+                                            <span x-text="`${psych.fechas_disponibles} fechas disponibles`"></span>
+                                        </p>
+                                    </template>
+                                    <button type="button" 
+                                            @click="selectAlternativePsychologist(psych.id)"
+                                            class="w-full text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                        <i class="fas fa-check mr-1"></i>Seleccionar
+                                    </button>
+                                </div>
+                            </template>
+                        </div>
+                        <div x-show="alternativePsychologists.length === 0" class="text-center py-6">
+                            <i class="fas fa-info-circle text-gray-400 text-2xl mb-2"></i>
+                            <p class="text-gray-600" x-text="appointmentDate ? 'No hay otros psicólogos disponibles para esta fecha.' : 'No hay psicólogos con fechas disponibles.'"></p>
+                        </div>
+                        <div class="text-center mt-4">
+                            <button type="button" 
+                                    @click="showAlternatives = false"
+                                    class="text-blue-600 hover:text-blue-800 underline">
+                                <i class="fas fa-times mr-1"></i>Cerrar
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="flex justify-between mt-8">
-                        <button @click="step = 1" type="button" class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">Anterior</button>
-                        <button @click="step = 3" :disabled="!appointmentDate || !appointmentTime" type="button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300">Siguiente</button>
+                        <button @click="step = 1" type="button" class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">
+                            <i class="fas fa-arrow-left mr-2"></i>Anterior
+                        </button>
+                        <button @click="step = 3" :disabled="!appointmentDate || !appointmentTime" type="button" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-300">
+                            Siguiente<i class="fas fa-arrow-right ml-2"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -187,7 +334,9 @@
                         </label>
                     </div>
                     <div class="flex justify-between mt-8">
-                        <button @click="step = 2" type="button" class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">Anterior</button>
+                        <button @click="step = 2" type="button" class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400">
+                            <i class="fas fa-arrow-left mr-2"></i>Anterior
+                        </button>
                         <button type="submit" :disabled="!termsAccepted" class="px-6 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 disabled:bg-gray-300">
                             <i class="fas fa-check mr-2"></i>Confirmar Cita
                         </button>
@@ -228,11 +377,18 @@ function appointmentForm() {
         availableTimes: [],
         isLoadingTimes: false,
         timeSlotsMessage: 'Selecciona un psicólogo y una fecha.',
+        availableDates: [],
+        isLoadingDates: false,
+        showAlternatives: false,
+        alternativePsychologists: [],
+        currentMonth: new Date().getMonth(),
+        currentYear: new Date().getFullYear(),
         
         init() {
             this.$watch('psychologist', () => {
                 this.resetTime();
-                this.fetchAvailableTimes();
+                this.resetDate();
+                this.fetchAvailableDates();
             });
             this.$watch('appointmentDate', () => {
                 this.resetTime();
@@ -240,18 +396,71 @@ function appointmentForm() {
             });
         },
 
-        get minDate() {
-    const today = new Date();
-            today.setDate(today.getDate() + 1);
-            return today.toISOString().split('T')[0];
+        get currentMonthYear() {
+            const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                           'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+            return `${months[this.currentMonth]} ${this.currentYear}`;
+        },
+
+        get calendarDays() {
+            const days = [];
+            const firstDay = new Date(this.currentYear, this.currentMonth, 1);
+            const lastDay = new Date(this.currentYear, this.currentMonth + 1, 0);
+            const startDate = new Date(firstDay);
+            
+            // Ajustar para que la semana empiece en domingo
+            const dayOfWeek = firstDay.getDay();
+            startDate.setDate(startDate.getDate() - dayOfWeek);
+            
+            for (let i = 0; i < 42; i++) {
+                const currentDate = new Date(startDate);
+                currentDate.setDate(startDate.getDate() + i);
+                
+                const dateString = currentDate.toISOString().split('T')[0];
+                const isCurrentMonth = currentDate.getMonth() === this.currentMonth;
+                const isAvailable = this.availableDates.some(d => d.fecha === dateString);
+                const isSelected = this.appointmentDate === dateString;
+                const isToday = dateString === new Date().toISOString().split('T')[0];
+                const isPast = currentDate < new Date();
+                
+                days.push({
+                    date: dateString,
+                    dayNumber: currentDate.getDate(),
+                    available: isCurrentMonth && isAvailable && !isPast,
+                    selected: isSelected,
+                    isCurrentMonth: isCurrentMonth,
+                    isToday: isToday,
+                    isPast: isPast
+                });
+            }
+            
+            return days;
+        },
+
+        previousMonth() {
+            if (this.currentMonth === 0) {
+                this.currentMonth = 11;
+                this.currentYear--;
+            } else {
+                this.currentMonth--;
+            }
+        },
+
+        nextMonth() {
+            if (this.currentMonth === 11) {
+                this.currentMonth = 0;
+                this.currentYear++;
+            } else {
+                this.currentMonth++;
+            }
         },
 
         fetchAvailableTimes() {
             if (!this.psychologist || !this.appointmentDate) {
                 this.availableTimes = [];
                 this.timeSlotsMessage = 'Selecciona un psicólogo y una fecha.';
-            return;
-        }
+                return;
+            }
 
             this.isLoadingTimes = true;
             this.availableTimes = [];
@@ -266,7 +475,7 @@ function appointmentForm() {
                     this.availableTimes = data;
                     if (data.length === 0) {
                         this.timeSlotsMessage = 'No hay horarios disponibles para este día.';
-            }
+                    }
                 })
                 .catch(error => {
                     console.error('Error fetching times:', error);
@@ -284,6 +493,98 @@ function appointmentForm() {
         resetTime() {
             this.appointmentTime = '';
             this.availableTimes = [];
+        },
+
+        resetDate() {
+            this.appointmentDate = '';
+            this.availableDates = [];
+            this.showAlternatives = false;
+            this.alternativePsychologists = [];
+        },
+
+        fetchAvailableDates() {
+            if (!this.psychologist) {
+                this.availableDates = [];
+                return;
+            }
+
+            this.isLoadingDates = true;
+            this.availableDates = [];
+
+            fetch(`/get-available-dates/${this.psychologist}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    this.availableDates = data;
+                    if (data.length === 0) {
+                        this.timeSlotsMessage = 'No hay fechas disponibles para este psicólogo.';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching dates:', error);
+                    this.timeSlotsMessage = 'Error al cargar las fechas.';
+                })
+                .finally(() => {
+                    this.isLoadingDates = false;
+                });
+        },
+
+        selectDate(date) {
+            this.appointmentDate = date;
+            this.resetTime();
+            this.fetchAvailableTimes();
+        },
+
+        showAlternativePsychologists() {
+            this.showAlternatives = true;
+            this.fetchAlternativePsychologists();
+        },
+
+        showAllPsychologists() {
+            this.showAlternatives = true;
+            this.fetchAllPsychologists();
+        },
+
+        fetchAlternativePsychologists() {
+            if (!this.appointmentDate) {
+                this.alternativePsychologists = [];
+                return;
+            }
+
+            fetch(`/get-alternative-psychologists/${this.appointmentDate}`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    this.alternativePsychologists = data;
+                })
+                .catch(error => {
+                    console.error('Error fetching alternative psychologists:', error);
+                });
+        },
+
+        fetchAllPsychologists() {
+            fetch(`/get-all-available-psychologists`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    this.alternativePsychologists = data;
+                })
+                .catch(error => {
+                    console.error('Error fetching all psychologists:', error);
+                });
+        },
+
+        selectAlternativePsychologist(id) {
+            this.psychologist = id;
+            this.showAlternatives = false;
+            this.resetTime();
+            this.fetchAvailableDates();
         }
     }
 }

@@ -1,10 +1,10 @@
-{% extends "base.html" %}
+{% extends "base_panel.html" %}
 
 {% block title %}Panel de Administración{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
-    <!-- Header -->
+    <!-- Header con navegación -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white rounded-xl shadow-md p-6">
         <div>
             <h1 class="text-2xl md:text-3xl font-bold text-blue-800 flex items-center">
@@ -12,7 +12,7 @@
             </h1>
             <p class="text-gray-600 mt-2">Bienvenido al panel de control. Aquí puedes gestionar citas, usuarios y ver el resumen de la clínica.</p>
         </div>
-        <div class="flex space-x-3 mt-4 md:mt-0">
+        <div class="flex flex-wrap gap-3 mt-4 md:mt-0">
             <a href="{{ url_for('admin_citas') }}" 
                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                title="Gestionar Citas">
@@ -22,6 +22,16 @@
                class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                title="Administrar Usuarios">
                 <i class="fas fa-users mr-2"></i>Administrar Usuarios
+            </a>
+            <a href="{{ url_for('index') }}" 
+               class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Ir al Sitio Web">
+                <i class="fas fa-home mr-2"></i>Ir al Sitio
+            </a>
+            <a href="{{ url_for('logout') }}" 
+               class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
+               title="Cerrar Sesión">
+                <i class="fas fa-sign-out-alt mr-2"></i>Cerrar Sesión
             </a>
         </div>
     </div>
