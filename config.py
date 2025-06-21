@@ -9,20 +9,31 @@ class Config:
     APP_NAME = "Mentalmente - Psicología Especializada"
     
     # Configuración de correo 
-    MAIL_SERVER = 'smtp.gmail.com'
-    MAIL_PORT = 587
-    MAIL_USE_TLS = True
-    MAIL_USE_SSL = False
-    MAIL_USERNAME = 'citasmentalmente@gmail.com'
-    MAIL_PASSWORD = 'rehu udfw lakk zuhp'
-    MAIL_DEFAULT_SENDER = ('Clínica Mentalmente', 'citasmentalmente@gmail.com')
-    MAIL_DEBUG = True
-    MAIL_SUPPRESS_SEND = False
-    MAIL_TIMEOUT = 30
-    MAIL_MAX_EMAILS = None
+    MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
+    MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
+    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
+    MAIL_USE_SSL = os.getenv('MAIL_USE_SSL', 'False').lower() == 'true'
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME', 'citasmentalmente@gmail.com')
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD', 'rehu udfw lakk zuhp')
+    MAIL_DEFAULT_SENDER = ('Clínica Mentalmente', MAIL_USERNAME)
+    MAIL_DEBUG = os.getenv('MAIL_DEBUG', 'False').lower() == 'true'
+    MAIL_SUPPRESS_SEND = os.getenv('MAIL_SUPPRESS_SEND', 'False').lower() == 'true'
+    MAIL_TIMEOUT = int(os.getenv('MAIL_TIMEOUT', 30))
+    MAIL_MAX_EMAILS = int(os.getenv('MAIL_MAX_EMAILS', 0)) if os.getenv('MAIL_MAX_EMAILS') else None
     
-    # Configuración de base de datos MySQL
-    SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:@localhost/mentalmente'
+    # Configuración de base de datos
+    # Para desarrollo local usa MySQL, para producción usa PostgreSQL de Render
+    DATABASE_URL = os.getenv('DATABASE_URL')
+    if DATABASE_URL and DATABASE_URL.startswith('postgres://'):
+        DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
+    
+    if DATABASE_URL:
+        # Producción - PostgreSQL en Render
+        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+    else:
+        # Desarrollo local - MySQL
+        SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:@localhost/mentalmente'
+    
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ENGINE_OPTIONS = {
         'pool_pre_ping': True,
@@ -55,8 +66,8 @@ class ProductionConfig(Config):
     MAIL_DEBUG = False
     # Configuración para producción 
     MAIL_SERVER = os.getenv('PROD_MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = os.getenv('PROD_MAIL_PORT', 587)
-    MAIL_USE_TLS = os.getenv('PROD_MAIL_USE_TLS', 'True') == 'True'
+    MAIL_PORT = int(os.getenv('PROD_MAIL_PORT', 587))
+    MAIL_USE_TLS = os.getenv('PROD_MAIL_USE_TLS', 'True').lower() == 'true'
     MAIL_USERNAME = os.getenv('PROD_MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('PROD_MAIL_PASSWORD')
 
