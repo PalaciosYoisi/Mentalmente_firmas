@@ -30,18 +30,30 @@ class Config:
     if DATABASE_URL:
         # Producción - PostgreSQL en Render
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
+        # Configuración específica para PostgreSQL
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 3600,
+            'pool_timeout': 30,
+            'pool_size': 10,
+            'max_overflow': 20,
+            'connect_args': {
+                'connect_timeout': 10,
+                'application_name': 'mentalmente_app'
+            }
+        }
     else:
         # Desarrollo local - MySQL
         SQLALCHEMY_DATABASE_URI = 'mysql+mysqlconnector://root:@localhost/mentalmente'
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,
+            'pool_recycle': 3600,
+            'pool_timeout': 30,
+            'pool_size': 10,
+            'max_overflow': 20,
+        }
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_pre_ping': True,
-        'pool_recycle': 3600,
-        'pool_timeout': 30,
-        'pool_size': 10,
-        'max_overflow': 20,
-    }
     
     # Configuración de la aplicación
     UPLOAD_FOLDER = 'pdfs'
@@ -64,12 +76,22 @@ class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
     MAIL_DEBUG = False
+    SQLALCHEMY_ECHO = False
+    
     # Configuración para producción 
     MAIL_SERVER = os.getenv('PROD_MAIL_SERVER', 'smtp.gmail.com')
     MAIL_PORT = int(os.getenv('PROD_MAIL_PORT', 587))
     MAIL_USE_TLS = os.getenv('PROD_MAIL_USE_TLS', 'True').lower() == 'true'
     MAIL_USERNAME = os.getenv('PROD_MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('PROD_MAIL_PASSWORD')
+    
+    # Configuración de seguridad para producción
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    
+    # Configuración de logging
+    LOG_LEVEL = 'INFO'
 
 config = {
     'development': DevelopmentConfig,
